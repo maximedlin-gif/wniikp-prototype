@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Рабочее место лаборатории (демо) | ВНИИКП</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="kabinet.css?v=2">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body class="kb">
+<header class="kb-top"><div class="kb-wrap">
+  <div class="kb-brand">ВНИИКП · Кабинет <span class="kb-demo">демо</span><div class="kb-sub2">Рабочее место лаборатории</div></div>
+  <div class="kb-actions">
+    <button id="kb-reset" class="kb-mini" type="button">Сбросить демо</button>
+    <a href="index.html" class="kb-mini">← На сайт</a>
+  </div>
+</div></header>
+
+<div class="kb-wrap kb-main">
+  <div class="kb-labbar">
+    <label for="kb-lab">Кабинет лаборатории:</label>
+    <select id="kb-lab"></select>
+    <span class="kb-labbar-hint">— у каждой из 5 лабораторий свой кабинет</span>
+  </div>
+  <div class="kb-tabs" role="tablist">
+    <button class="kb-tab active" data-tab="dash" type="button">Дашборд</button>
+    <button class="kb-tab" data-tab="journal" type="button">Журнал образцов</button>
+    <button class="kb-tab" data-tab="cal" type="button">Календарь приборов</button>
+  </div>
+  <div id="kb-dash" class="kb-pane"></div>
+  <div id="kb-journal" class="kb-pane hidden"></div>
+  <div id="kb-cal" class="kb-pane hidden"></div>
+</div>
+
+<div id="kb-proto-modal" class="kb-modal hidden">
+  <div class="kb-modal-box">
+    <div class="kb-modal-head">
+      <b>Протокол испытаний</b>
+      <div><button id="kb-proto-print" class="kb-mini" type="button">Печать</button> <button id="kb-proto-close" class="kb-mini" type="button">Закрыть</button></div>
+    </div>
+    <div id="kb-proto-body" class="proto"></div>
+  </div>
+</div>
+
+<script src="kabinet.js?v=2"></script>
+</body>
+</html>

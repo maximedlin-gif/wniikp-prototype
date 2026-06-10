@@ -1,0 +1,2250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Морфометрический анализ КТ — расчётный модуль</title>
+<style>
+  :root{
+    --navy:#0F2847; --navy2:#1B3A5C; --cream:#FAF7F0; --paper:#FFFFFF;
+    --terra:#C04E1A; --terra-soft:#E8A579; --ink:#1A2230; --muted:#6B7685;
+    --line:#E3DCCE; --air:#3E6FB0; --crumb:#D9A441; --shell:#C0461A;
+    --good:#2E7D52; --warn:#B8860B; --shadow:0 1px 3px rgba(15,40,71,.08),0 8px 24px rgba(15,40,71,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--cream); color:var(--ink); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  h1,h2,h3{font-family:Georgia,"PT Serif",serif;font-weight:700;line-height:1.2}
+
+  /* Header */
+  header{
+    background:var(--navy); color:#fff; padding:18px 28px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    border-bottom:3px solid var(--terra);
+  }
+  header .logo{
+    width:42px;height:42px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 50% 50%, transparent 0 5px, var(--terra) 5px 7px, transparent 7px 11px, #fff 11px 12px, transparent 12px 17px, var(--terra-soft) 17px 18px, transparent 18px);
+    border:1px solid rgba(255,255,255,.3);
+  }
+  header h1{font-size:19px;margin:0;color:#fff}
+  header .sub{font-size:12.5px;color:#9DB4D0;margin-top:2px}
+  header .spacer{flex:1}
+  header .ver{font-size:11px;color:#7E97B6;text-align:right}
+
+  /* Layout */
+  .wrap{max-width:1280px;margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media(max-width:920px){.wrap{grid-template-columns:1fr}}
+
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .panel-h{padding:13px 16px;border-bottom:1px solid var(--line);font-family:Georgia,serif;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+  .panel-h .n{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-family:system-ui;display:grid;place-items:center;flex:none}
+  .panel-b{padding:16px}
+
+  /* Controls column sticky */
+  .controls{position:sticky;top:16px;display:flex;flex-direction:column;gap:18px}
+  @media(max-width:920px){.controls{position:static}}
+
+  /* Dropzone */
+  #drop{
+    border:2px dashed var(--terra-soft);border-radius:10px;background:#FCF8F2;
+    padding:22px 14px;text-align:center;cursor:pointer;transition:.15s;
+  }
+  #drop:hover,#drop.drag{background:#FBEFE3;border-color:var(--terra)}
+  #drop .ic{font-size:30px;line-height:1}
+  #drop .t{font-weight:600;margin-top:8px;font-size:14px}
+  #drop .h{font-size:12px;color:var(--muted);margin-top:4px}
+  .row-btns{display:flex;gap:8px;margin-top:12px}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:13.5px;font-weight:600;transition:.15s}
+  .btn-demo{flex:1;background:#EDF2F8;color:var(--navy);border:1px solid #D2DEEC;padding:9px}
+  .btn-demo:hover{background:#E2EBF5}
+  .btn-clear{background:#F4EEE6;color:var(--muted);border:1px solid var(--line);padding:9px 12px}
+  .btn-clear:hover{color:var(--terra)}
+
+  /* slice list */
+  #slices{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  #slices .thumb{position:relative;width:48px;height:48px;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:#000}
+  #slices .thumb canvas{width:100%;height:100%;object-fit:cover;display:block}
+  #slices .more{width:48px;height:48px;border-radius:6px;border:1px dashed var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
+  .slice-info{font-size:12px;color:var(--muted);margin-top:8px}
+
+  /* params */
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--navy);margin-bottom:4px}
+  .field .hint{font-size:11px;color:var(--muted);font-weight:400}
+  .field input,.field select{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;
+    font-family:"SF Mono",ui-monospace,monospace;background:#fff;color:var(--ink)
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--terra);box-shadow:0 0 0 3px rgba(192,78,26,.1)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .autoscale{display:flex;gap:6px;margin-top:6px}
+  .autoscale input{flex:1;min-width:0}
+  .autoscale button{background:#EDF2F8;color:var(--navy);border:1px solid #D2DEEC;padding:0 13px;font-size:12.5px;white-space:nowrap}
+  .autoscale button:hover{background:#E2EBF5}
+  #autoNote b{color:var(--terra)}
+  /* calibration box */
+  .cal-box{margin:6px 0 14px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#FCFAF5}
+  .cal-box summary{font-size:12.5px;font-weight:600;color:var(--navy);cursor:pointer;list-style:none}
+  .cal-box summary::-webkit-details-marker{display:none}
+  .cal-box summary:before{content:"▸ ";color:var(--terra)}
+  .cal-box[open] summary:before{content:"▾ "}
+  .cal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+  .cal-grid .cal-h{font-size:10.5px;color:var(--muted);font-weight:600;text-align:center}
+  .cal-grid input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:"SF Mono",monospace;font-size:12.5px}
+  #calNote b{color:var(--terra)}
+  .opt-row{display:flex;flex-wrap:wrap;gap:8px 16px;margin:4px 0 12px}
+  .opt-row label{font-size:12px;color:var(--navy);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+  .opt-row input{accent-color:var(--terra)}
+  /* LUT palette row + colorbar */
+  .lut-row{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:12.5px;color:var(--navy)}
+  .lut-row select{padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:#fff}
+  #lutCanvas{max-width:460px;margin:0 auto;display:block}
+  .lut-bar-wrap{display:flex;align-items:center;gap:10px;max-width:460px;margin:10px auto 0}
+  .lut-bar-wrap #lutBar{flex:1;height:16px;border-radius:4px;border:1px solid var(--line)}
+  .lut-bar-wrap .hint{white-space:nowrap}
+  /* print-only protocol header */
+  .print-only{display:none}
+  /* slice navigation */
+  .slice-nav{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:12.5px;color:var(--navy)}
+  .slice-nav input[type=range]{flex:1;max-width:340px;accent-color:var(--terra)}
+  .slice-nav b{min-width:54px}
+  /* sample base table */
+  .base-count{font-family:system-ui;font-size:12px;font-weight:600;color:var(--terra);background:#FCEFE6;border:1px solid var(--terra-soft);border-radius:20px;padding:2px 10px}
+  .base-empty{font-size:13px;color:var(--muted);padding:18px;text-align:center;background:#FBF8F2;border:1px dashed var(--line);border-radius:10px}
+  #baseTable{font-size:12.5px;white-space:nowrap}
+  #baseTable th{position:sticky;top:0}
+  #baseTable td.del{cursor:pointer;color:var(--muted);text-align:center;font-weight:700}
+  #baseTable td.del:hover{color:var(--terra)}
+  #baseTable tr:hover td{background:#FCFAF5}
+  /* threshold controls */
+  .thr-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--navy)}
+  .thr-cell{display:inline-flex;align-items:center;gap:7px}
+  .thr-cell input[type=range]{width:120px;accent-color:var(--terra)}
+  .thr-cell b{min-width:30px;color:var(--terra)}
+  .thr-controls button{background:#EDF2F8;color:var(--navy);border:1px solid #D2DEEC;border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer}
+  .thr-controls button:hover{background:#E2EBF5}
+  .thr-mode{font-size:11px;color:var(--muted)}
+
+  .btn-run{
+    width:100%;background:var(--terra);color:#fff;padding:13px;font-size:15px;margin-top:4px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-run:hover{background:#A53F12}
+  .btn-run:disabled{background:#C9BBA9;cursor:not-allowed}
+
+  /* progress */
+  #prog{margin-top:14px;display:none}
+  #prog.on{display:block}
+  .pbar{height:6px;background:#EFE8DC;border-radius:4px;overflow:hidden}
+  .pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--terra),var(--terra-soft));transition:width .25s}
+  .pstage{font-size:12px;color:var(--muted);margin-top:7px;min-height:16px}
+
+  /* results */
+  .placeholder{padding:60px 24px;text-align:center;color:var(--muted)}
+  .placeholder .big{font-size:46px;opacity:.5}
+  .placeholder .t{font-family:Georgia,serif;font-size:17px;color:var(--navy);margin-top:12px}
+  .placeholder .h{font-size:13px;margin-top:6px;max-width:380px;margin-left:auto;margin-right:auto}
+
+  #results{display:none}
+  #results.on{display:block}
+
+  .status-banner{padding:11px 14px;border-radius:9px;font-size:12.5px;display:flex;gap:9px;align-items:flex-start;margin-bottom:18px}
+  .status-banner.ok{background:#EAF3EC;border:1px solid #C5E0CC;color:#23613f}
+  .status-banner.note{background:#FBF3E2;border:1px solid #EBD9AE;color:#7a5a14}
+  .status-banner.warn{background:#FBE9E4;border:1px solid #E3B6A4;color:#8a3514}
+  .status-banner.warn .bic{color:#C04E1A}
+  .status-banner .bic{font-size:15px;flex:none}
+
+  /* metric cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;margin-bottom:20px}
+  .card{position:relative;background:linear-gradient(160deg,#fff,#FBF8F2);border:1px solid var(--line);border-radius:10px;padding:13px 14px}
+  .card .k{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.02em;padding-right:22px}
+  .card .v{font-size:23px;font-weight:700;color:var(--navy);margin-top:3px;font-family:"SF Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden}
+  .card .v.small{font-size:17px}
+  .card .u{font-size:12px;color:var(--terra);font-weight:600;white-space:nowrap}
+  .card.accent{background:linear-gradient(160deg,#FCEFE6,#FBF8F2);border-color:var(--terra-soft)}
+  /* info icon (inline) + floating tooltip */
+  .info{display:inline-grid;place-items:center;vertical-align:middle;box-sizing:border-box;
+    width:17px;height:17px;padding:0;margin-left:5px;border-radius:50%;
+    background:#E7E0D2;color:var(--muted);border:1px solid var(--line);
+    font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:11px;line-height:1;cursor:pointer;transition:.12s}
+  .info:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .panel-h .info{margin-left:3px}
+  .card .info{position:absolute;top:10px;right:10px;width:18px;height:18px;font-size:12px;margin:0}
+  .card.accent .info{background:#F2D9C7}
+  #floatTip{position:absolute;z-index:200;width:252px;max-width:80vw;
+    background:var(--navy);color:#fff;font-size:12px;line-height:1.5;padding:11px 13px;border-radius:9px;
+    box-shadow:0 12px 30px rgba(15,40,71,.3);display:none;font-weight:400;letter-spacing:0}
+  #floatTip.show{display:block}
+
+  /* viz blocks */
+  .viz{margin-bottom:22px}
+  .viz-h{font-family:Georgia,serif;font-weight:700;font-size:15px;color:var(--navy);margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .viz-h .tag{font-size:10px;font-family:system-ui;font-weight:600;padding:2px 7px;border-radius:20px;background:#EDF2F8;color:#496A93}
+  .viz-d{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  canvas.chart{width:100%;display:block;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .imgrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.imgrow{grid-template-columns:1fr}}
+  .imgrow figure{margin:0}
+  .imgrow figcaption{font-size:11.5px;color:var(--muted);text-align:center;margin-top:5px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  table th,table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  table th{font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600;background:#FBF8F2}
+  table td.val{font-family:"SF Mono",ui-monospace,monospace;text-align:right;font-variant-numeric:tabular-nums;color:var(--navy);font-weight:600}
+  table td.u{color:var(--muted);width:64px;font-size:12px}
+  table tr.group td{background:#F6F1E8;font-weight:700;color:var(--navy);font-family:Georgia,serif;font-size:12.5px}
+
+  .exports{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .btn-exp{background:var(--navy);color:#fff;padding:10px 16px;font-size:13px;display:inline-flex;gap:7px;align-items:center}
+  .btn-exp:hover{background:var(--navy2)}
+  .btn-exp.ghost{background:#fff;color:var(--navy);border:1px solid #C9D6E5}
+  .btn-exp.ghost:hover{background:#F2F6FB}
+
+  footer{max-width:1280px;margin:10px auto 40px;padding:0 22px;font-size:12px;color:var(--muted)}
+  footer .disc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;line-height:1.6}
+  footer b{color:var(--navy)}
+
+  /* RAW dimensions modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,40,71,.45);display:none;align-items:center;justify-content:center;z-index:300;padding:20px}
+  .modal-overlay.on{display:flex}
+  .modal{background:#fff;border-radius:14px;padding:22px 24px;max-width:430px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+  .modal h3{margin:0 0 8px;font-size:18px}
+  .modal .mhint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+
+  @media print{
+    header,.controls,.exports,footer,#basePanel,.slice-nav,.lut-row,.thr-controls,#statusBanner{display:none!important}
+    .wrap{grid-template-columns:1fr;padding:0;max-width:100%}
+    .panel{box-shadow:none;border:none}
+    .panel-h{display:none}
+    body{background:#fff}
+    .print-only{display:block}
+    #printHeader h1{font-family:Georgia,serif;font-size:20px;color:#000;margin:0 0 6px;border-bottom:2px solid #000;padding-bottom:6px}
+    #printMeta{font-size:12px;color:#222;margin-bottom:14px;line-height:1.7}
+    #printMeta b{color:#000}
+    .viz{break-inside:avoid}
+    .cards{grid-template-columns:repeat(4,1fr)}
+    .card .info{display:none}
+  }
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="mic-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="mic-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v5.5L5.2 17A2 2 0 0 0 7 20h10a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.7 14h8.6"/></symbol>
+  <symbol id="mic-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></symbol>
+  <symbol id="mic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="mic-doc" viewBox="0 0 24 24"><path d="M13.5 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5z"/><path d="M13.5 3v4.5H18M9 13h6M9 16.5h6"/></symbol>
+  <symbol id="mic-warning" viewBox="0 0 24 24"><path d="M12 4 21 20H3z"/><path d="M12 10v4.5M12 17.4h.01"/></symbol>
+</svg>
+<style>
+.svgico{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.18em;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ic .svgico{width:46px;height:46px;vertical-align:0}
+.big .svgico{width:40px;height:40px;vertical-align:0}
+.bic .svgico{width:1.2em;height:1.2em}
+</style>
+<header>
+  <div class="logo"></div>
+  <div>
+    <h1>Морфометрический анализ КТ</h1>
+    <div class="sub">Расчётный модуль · пористость, гранулометрия, плотность, толщина стенок</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="ver">прототип · v0.9<br>обработка в браузере</div>
+</header>
+
+<div class="wrap">
+  <!-- ====================== CONTROLS ====================== -->
+  <div class="controls">
+    <div class="panel">
+      <div class="panel-h"><span class="n">1</span> Данные среза</div>
+      <div class="panel-b">
+        <div id="drop">
+          <div class="ic"><svg class="svgico" aria-hidden="true"><use href="#mic-folder"></use></svg></div>
+          <div class="t">Загрузите файл или папку срезов</div>
+          <div class="h">PNG · JPG · BMP · TIFF (вкл. LZW) · DICOM · NRRD · MHA/MHD · NIfTI · VGI+VOL · RAW · видео · .log</div>
+        </div>
+        <input type="file" id="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff,.dcm,.dicom,.nrrd,.mha,.mhd,.nii,.gz,.vgi,.vol,.raw,.img,.log,.mp4,.webm,.mov,.avi,image/*,video/*" multiple hidden>
+        <input type="file" id="folder" webkitdirectory directory multiple hidden>
+        <div class="row-btns">
+          <button class="btn-demo" id="pickFolder"><svg class="svgico" aria-hidden="true"><use href="#mic-folder"></use></svg> Папка срезов</button>
+          <button class="btn-demo" id="genDemo"><svg class="svgico" aria-hidden="true"><use href="#mic-flask"></use></svg> Демо</button>
+          <button class="btn-clear" id="clear">Очистить</button>
+        </div>
+        <div class="field" id="stackOpt" style="margin:10px 0 0">
+          <label style="font-size:12px">Стек: макс. срезов <span class="hint">(прореживание больших папок)</span> <button class="info" type="button" aria-label="Пояснение" data-tip="Папка реконструкции может содержать сотни срезов (гигабайты) — браузер столько не загрузит. Модуль берёт равномерно не больше этого числа срезов через прореживание (каждый N-й). 100–150 достаточно для объёмного анализа однородного изделия.">i</button></label>
+          <input type="number" id="maxSlices" value="120" min="2" step="10" style="max-width:120px">
+        </div>
+        <div id="slices"></div>
+        <div class="slice-info" id="sliceInfo"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span class="n">2</span> Параметры <button class="info" type="button" aria-label="Пояснение" data-tip="Необязательные настройки расчёта. Задайте масштаб (размер вокселя) и массу — тогда результаты будут в мм, мм³ и г/см³. Без них расчёт тоже выполнится, но размеры будут в пикселях, а плотность не посчитается. Пористость и форма пор считаются в любом случае.">i</button></div>
+      <div class="panel-b">
+        <div class="two">
+          <div class="field"><label>ID образца</label><input type="text" id="sampleId" placeholder="напр. К-12"></div>
+          <div class="field"><label>Режим</label>
+            <input type="text" id="sampleRegime" list="regimeList" placeholder="норма / недомес…">
+            <datalist id="regimeList"><option>норма</option><option>недомес</option><option>перерасстойка</option><option>низкая темп. выпечки</option><option>высокая темп. выпечки</option></datalist>
+          </div>
+        </div>
+        <div class="field">
+          <label>Размер вокселя <span class="hint">(мм/пиксель)</span> <button class="info" type="button" aria-label="Пояснение" data-tip="Физический размер одного вокселя («3D-пикселя») в миллиметрах — это масштаб томограммы. Берётся из метаданных файла (DICOM/TIFF), из протокола сканирования или авто-калибровкой по известному габариту изделия (поле ниже). Без него длины считаются в пикселях; пористость в % корректна в любом случае.">i</button></label>
+          <input type="number" id="voxel" step="0.001" placeholder="напр. 0.050" >
+          <div class="hint" style="margin-top:4px">Пусто → результат в пикселях · или авто-калибровка ↓</div>
+          <div class="autoscale">
+            <input type="number" id="knownW" step="0.1" placeholder="реальная ширина изделия, мм">
+            <button id="autoBtn" title="Определить размер вокселя по габариту">↻ Авто</button>
+          </div>
+          <div class="hint" id="autoNote" style="margin-top:5px"></div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label>Шаг срезов <span class="hint">(мм)</span></label>
+            <input type="number" id="sliceTh" step="0.001" placeholder="0.050">
+          </div>
+          <div class="field">
+            <label>Масса <span class="hint">(г)</span></label>
+            <input type="number" id="mass" step="0.1" placeholder="—">
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label>Классы <button class="info" type="button" aria-label="Пояснение" data-tip="На сколько уровней яркости делить изделие при сегментации. «2» — воздух / материал (простая структура). «3» — воздух / материал / плотный слой (отделяет корочку или скорлупу). Для кексов и выпечки обычно достаточно 2–3 классов.">i</button></label>
+            <select id="nclass">
+              <option value="3" selected>3 (воздух/материал/плотный)</option>
+              <option value="2">2 (воздух/материал)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Объём <span class="hint">(см³, вручную)</span></label>
+            <input type="number" id="manVol" step="0.1" placeholder="—">
+          </div>
+        </div>
+        <div class="opt-row">
+          <label><input type="checkbox" id="optWatershed" checked> разделять слипшиеся поры <button class="info" type="button" aria-label="Пояснение" data-tip="Watershed по карте расстояний: соприкасающиеся поры разрезаются по «перешейкам» и считаются как отдельные. Точнее для гранулометрии. Выключите, если поры дробятся слишком мелко.">i</button></label>
+          <label><input type="checkbox" id="optLocalTh" checked> точная толщина стенок <button class="info" type="button" aria-label="Пояснение" data-tip="Строгая локальная толщина по Хильдебранду: диаметр наибольшего шара, вписанного в материал и накрывающего точку. Точнее приближения 2×EDT. Для очень больших стеков (>8 млн вокселей) в 3D автоматически используется быстрое приближение.">i</button></label>
+          <label><input type="checkbox" id="optPercentile"> устойчивая яркость (1–99%) <button class="info" type="button" aria-label="Пояснение" data-tip="Растяжка контраста по перцентилям 1–99% вместо мин/макс. Защищает от «горячих» пикселей и артефактов: одиночный сверхъяркий воксель больше не «выжигает» контраст и не сбивает пороги. Рекомендуется для реальных шумных КТ.">i</button></label>
+          <label><input type="checkbox" id="optROI"> ROI (центр. круг) <button class="info" type="button" aria-label="Пояснение" data-tip="Анализировать только центральную круглую область заданного радиуса — чтобы исключить держатель образца, крепления и краевые артефакты. Радиус — ползунок ниже.">i</button></label>
+          <label><input type="checkbox" id="optCrop"> авто-обрезка до объекта <button class="info" type="button" aria-label="Пояснение" data-tip="Для сканов, где небольшой объект лежит в большом пустом кадре (как с томографа). Находит изделие, обрезает пустое поле и лучевые артефакты, растягивает контраст внутри. Срабатывает только если объект уверенно мал и компактен (< 60% кадра); если объект во весь кадр или сложной формы — не трогает. Без обрезки авто-порог на таких сканах сбивается на фоне.">i</button></label>
+        </div>
+        <div class="thr-cell" id="roiRow" style="display:none;margin:-6px 0 10px;font-size:12px">Радиус ROI <input type="range" id="roiPct" min="20" max="100" step="1" value="90" style="width:130px;accent-color:var(--terra)"> <b id="roiPctV" class="mono" style="color:var(--terra)">90%</b></div>
+        <details class="cal-box">
+          <summary>Калибровка плотности <button class="info" type="button" aria-label="Пояснение" data-tip="Связь «яркость → плотность» по точкам. Если в скане есть эталоны известной плотности (фантом) или вы знаете плотность мякиша/корочки — впишите 2–3 пары «яркость = плотность, г/см³». Программа строит линию и считает истинную плотность стенок и кажущуюся плотность — без взвешивания. Кнопка «из классов» подставит средние яркости воздуха/материала/плотного после расчёта.">i</button></summary>
+          <div class="cal-grid">
+            <span class="cal-h">яркость (0–255)</span><span class="cal-h">плотность, г/см³</span>
+            <input type="number" id="calB1" placeholder="напр. 110"><input type="number" id="calD1" step="0.001" placeholder="напр. 1.10">
+            <input type="number" id="calB2" placeholder="напр. 160"><input type="number" id="calD2" step="0.001" placeholder="напр. 1.35">
+            <input type="number" id="calB3" placeholder="(опц.)"><input type="number" id="calD3" step="0.001" placeholder="(опц.)">
+          </div>
+          <button class="btn-demo" id="calFromClasses" style="width:100%;margin-top:8px">↧ подставить яркости классов</button>
+          <div class="hint" id="calNote" style="margin-top:6px"></div>
+        </details>
+        <button class="btn-run" id="run" disabled>▶ Выполнить расчёт</button>
+        <div id="prog">
+          <div class="pbar"><i id="pbarFill"></i></div>
+          <div class="pstage" id="pstage"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================== RESULTS ====================== -->
+  <div class="panel">
+    <div class="panel-h"><span class="n">3</span> Протокол контроля</div>
+    <div class="panel-b">
+      <div id="printHeader" class="print-only">
+        <h1>Протокол морфометрического анализа КТ</h1>
+        <div id="printMeta"></div>
+      </div>
+      <div class="placeholder" id="placeholder">
+        <div class="big"><svg class="svgico" aria-hidden="true"><use href="#mic-chart"></use></svg></div>
+        <div class="t">Протокол появится здесь</div>
+        <div class="h">Загрузите срез томограммы (PNG/JPG) или нажмите «Демо-образец», задайте масштаб и массу, затем «Выполнить расчёт». Сегментация, поиск пор и расчёт метрик выполняются прямо в браузере.</div>
+      </div>
+
+      <div id="results">
+        <div class="status-banner" id="statusBanner"></div>
+
+        <div class="cards" id="cards"></div>
+
+        <!-- Histogram -->
+        <div class="viz">
+          <h3 class="viz-h">Гистограмма яркости и пороги <span class="tag">сегментация</span></h3>
+          <p class="viz-d">Распределение яркости вокселей внутри изделия. Пунктир — пороги классов. По умолчанию найдены методом Оцу; можно подвинуть вручную.</p>
+          <canvas class="chart" id="histChart" height="220"></canvas>
+          <div class="thr-controls" id="thrControls">
+            <span class="thr-cell">T1 <input type="range" id="thrT1" min="1" max="254" step="1"> <b id="thrT1v" class="mono"></b></span>
+            <span class="thr-cell" id="thrT2cell">T2 <input type="range" id="thrT2" min="1" max="254" step="1"> <b id="thrT2v" class="mono"></b></span>
+            <button id="thrAuto">↺ авто (Оцу)</button>
+            <span class="thr-mode" id="thrMode"></span>
+          </div>
+        </div>
+
+        <!-- Segmentation images -->
+        <div class="viz">
+          <h3 class="viz-h">Сегментация среза <span class="tag">воздух / материал / плотный</span></h3>
+          <p class="viz-d">Каждый воксель отнесён к классу по яркости. Фон вне изделия исключён заливкой от границ кадра — порами считаются только замкнутые внутренние полости.</p>
+          <div class="slice-nav" id="sliceNav" style="display:none">
+            <span>Срез</span> <input type="range" id="sliceSlider" min="0" step="1"> <b id="sliceLabel" class="mono"></b>
+            <span class="hint" id="slicePor"></span>
+          </div>
+          <div class="imgrow">
+            <figure><canvas class="chart" id="origCanvas"></canvas><figcaption>Исходный срез (в обработке)</figcaption></figure>
+            <figure><canvas class="chart" id="segCanvas"></canvas><figcaption>Карта классов + контур изделия</figcaption></figure>
+          </div>
+          <div class="legend" id="segLegend"></div>
+        </div>
+
+        <!-- Pseudocolor contrasting -->
+        <div class="viz">
+          <h3 class="viz-h">Псевдоцветовое контрастирование <span class="tag">цветовая карта плотности</span></h3>
+          <p class="viz-d">Монохромный рентгеновский срез раскрашен по плотности: тёмные тона — поры/воздух, тёплые и яркие — плотный материал. Делает перепады внутренней структуры заметнее для оператора, не меняя расчёт.</p>
+          <div class="lut-row">
+            Палитра:
+            <select id="lutSelect">
+              <option value="inferno" selected>inferno</option>
+              <option value="viridis">viridis</option>
+              <option value="hot">hot</option>
+              <option value="jet">jet (радуга)</option>
+              <option value="gray">оттенки серого</option>
+            </select>
+            <button class="info" type="button" aria-label="Пояснение" data-tip="Та самая идея «цветового контрастирования» из исходного предложения. Псевдоцветовая палитра переводит малозаметные перепады яркости (плотности) в хорошо различимые цвета. На реальных срезах это привязывается к коэффициенту ослабления / единицам Хаунсфилда.">i</button>
+          </div>
+          <figure><canvas class="chart" id="lutCanvas"></canvas></figure>
+          <div class="lut-bar-wrap"><span class="hint">поры / воздух</span><canvas id="lutBar"></canvas><span class="hint">плотный материал</span></div>
+        </div>
+
+        <!-- Granulometry -->
+        <div class="viz">
+          <h3 class="viz-h">Гранулометрия пор <span class="tag">распределение по размерам</span></h3>
+          <p class="viz-d">Поры выделены анализом связных компонент. Гистограмма — распределение пор по эквивалентному диаметру (диаметр круга той же площади).</p>
+          <canvas class="chart" id="granChart" height="220"></canvas>
+        </div>
+
+        <!-- Wall thickness -->
+        <div class="viz">
+          <h3 class="viz-h">Толщина стенок между порами <span class="tag">оценка по EDT</span></h3>
+          <p class="viz-d">По карте расстояний (евклидово преобразование) для материала. Оценка: удвоенное расстояние от точки материала до ближайшей поры/границы.</p>
+          <canvas class="chart" id="wallChart" height="200"></canvas>
+        </div>
+
+        <!-- Density profile -->
+        <div class="viz">
+          <h3 class="viz-h">Профиль по высоте <span class="tag">плотность / пористость</span></h3>
+          <p class="viz-d">Изделие разбито на горизонтальные слои. Для каждого — доля материала и средняя яркость (прокси плотности). Виден контраст «корочка ↔ рыхлый центр».</p>
+          <canvas class="chart" id="profChart" height="200"></canvas>
+        </div>
+
+        <!-- Full table -->
+        <div class="viz">
+          <h3 class="viz-h">Полный протокол показателей</h3>
+          <table id="metricTable"><tbody></tbody></table>
+        </div>
+
+        <div class="exports noprint">
+          <button class="btn-exp" id="addToBase"><svg class="svgico" aria-hidden="true"><use href="#mic-plus"></use></svg> В базу образцов</button>
+          <button class="btn-exp ghost" id="expPrint"><svg class="svgico" aria-hidden="true"><use href="#mic-doc"></use></svg> Протокол (PDF)</button>
+          <button class="btn-exp ghost" id="expCsv">↧ Данные (CSV)</button>
+          <button class="btn-exp ghost" id="expJson">↧ Протокол (JSON)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================== SAMPLE BASE ====================== -->
+    <div class="panel" id="basePanel" style="grid-column:1 / -1">
+      <div class="panel-h"><span class="n">4</span> База образцов <button class="info" type="button" aria-label="Пояснение" data-tip="Накопительная таблица для пилота: после каждого расчёта жмите «+ В базу образцов» — строка с ID, режимом и ключевыми метриками добавится сюда. Сохраняется между сессиями (в браузере). Выгрузите всё одним CSV — это готовый датасет, на котором видно, разделяют ли метрики режимы (норма/дефекты).">i</button> <span id="baseCount" class="base-count"></span></div>
+      <div class="panel-b">
+        <div id="baseEmpty" class="base-empty">Пока пусто. Рассчитайте образец, заполните «ID образца» и «Режим» в Параметрах, затем нажмите «<svg class="svgico" aria-hidden="true"><use href="#mic-plus"></use></svg> В базу образцов». Здесь накопится датасет пилота (норма / дефекты) — выгружается одним CSV.</div>
+        <div id="baseTableWrap" style="display:none;overflow-x:auto"><table id="baseTable"></table></div>
+        <div class="exports noprint" id="baseBtns" style="display:none">
+          <button class="btn-exp" id="baseExport">↧ Экспорт базы (CSV)</button>
+          <button class="btn-exp ghost" id="baseClear">Очистить базу</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="disc">
+    <b>Статус и ограничения.</b> Модуль выполняет <b>реальную обработку изображения в браузере</b>:
+    перевод в градации серого, построение гистограммы, сегментацию методом Оцу, поиск пор анализом
+    связных компонент, оценку толщины стенок по карте расстояний. Расчёт корректен для <b>одиночного
+    среза (2D)</b> или стека кадров. Для одиночного среза «объём» — это площадь сечения, а пористость —
+    площадная доля; помечено в протоколе. Полный трёхмерный анализ исходного тома (TIFF-стек / DICOM
+    с размером вокселя), 3D-связность 26-соседства и калибровка по единицам Хаунсфилда выполняются
+    серверным пайплайном (scikit-image / SimpleITK / PoreSpy) — этот прототип демонстрирует логику и
+    интерфейс будущего ПО. &nbsp;·&nbsp; Автор: М. Едлин · 2026.
+  </div>
+</footer>
+
+<div id="rawModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Параметры RAW-объёма</h3>
+    <p class="mhint">Файл <b id="rawFileName"></b> — сырой объём без заголовка, размеры в нём не записаны. Укажите их вручную (берутся из протокола сканирования):</p>
+    <div class="two">
+      <div class="field"><label>Ширина (px)</label><input type="number" id="rawW" placeholder="напр. 1000"></div>
+      <div class="field"><label>Высота (px)</label><input type="number" id="rawH" placeholder="напр. 1000"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>Срезов (глубина)</label><input type="number" id="rawD" value="1"></div>
+      <div class="field"><label>Тип данных</label>
+        <select id="rawType">
+          <option value="uint16">16 бит без знака</option>
+          <option value="short">16 бит со знаком</option>
+          <option value="uchar">8 бит</option>
+          <option value="float">32 бит float</option>
+          <option value="uint">32 бит без знака</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Порядок байт</label>
+      <select id="rawEndian"><option value="le">Little-endian</option><option value="be">Big-endian</option></select>
+    </div>
+    <div class="mhint" id="rawErr" style="color:var(--terra);margin:4px 0 0"></div>
+    <div class="modal-btns">
+      <button class="btn-clear" id="rawCancel">Отмена</button>
+      <button class="btn-run" id="rawLoad" style="margin-top:0;width:auto;padding:11px 20px">Загрузить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Морфометрический анализ КТ — браузерный расчётный модуль
+   Все алгоритмы реализованы вручную (без внешних библиотек),
+   чтобы файл работал автономно и офлайн.
+   ============================================================ */
+
+const MAXDIM = 720;            // макс. сторона при обработке (скорость)
+const state = { slices: [] };  // {name, w, h, gray:Float32Array, displayURL}
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const drop = $('drop'), fileInput = $('file');
+
+// ---------- file loading ----------
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+$('pickFolder').addEventListener('click', ()=> $('folder').click());
+$('folder').addEventListener('change', e => handleFiles(e.target.files));
+$('genDemo').addEventListener('click', generateDemo);
+$('clear').addEventListener('click', clearAll);
+$('run').addEventListener('click', ()=> runAnalysis());
+$('autoBtn').addEventListener('click', autoScale);
+
+// ---- ручной порог сегментации ----
+let thrDebounce;
+function readThrSliders(){
+  const nClasses=parseInt($('nclass').value,10);
+  const t1=parseInt($('thrT1').value,10);
+  if(nClasses===3){ let t2=parseInt($('thrT2').value,10); if(t2<=t1) t2=t1+1; manualThr=[t1,t2]; $('thrT2v').textContent=t2; }
+  else manualThr=[t1];
+  $('thrT1v').textContent=t1; $('thrMode').textContent='режим: ручной';
+}
+function rerunDebounced(){ clearTimeout(thrDebounce); thrDebounce=setTimeout(()=>{ if(state.slices.length) runAnalysis(); }, 240); }
+$('thrT1').addEventListener('input', ()=>{ readThrSliders(); rerunDebounced(); });
+$('thrT2').addEventListener('input', ()=>{ readThrSliders(); rerunDebounced(); });
+$('thrAuto').addEventListener('click', ()=>{ manualThr=null; if(state.slices.length) runAnalysis(); });
+
+// ======================= База образцов =======================
+let samples=[];
+try{ samples=JSON.parse(localStorage.getItem('ctSamples')||'[]')||[]; }catch(e){ samples=[]; }
+function saveSamples(){ try{ localStorage.setItem('ctSamples', JSON.stringify(samples)); }catch(e){} }
+const BASE_COLS=[
+  {k:'id',h:'ID'},{k:'regime',h:'Режим'},{k:'porosity',h:'Порист.%'},{k:'nPores',h:'Пор,шт'},
+  {k:'meanD',h:'Ø ср.'},{k:'medD',h:'Ø мед.'},{k:'wall',h:'Стенка'},{k:'wallDensity',h:'ρ стенок'},
+  {k:'vol',h:'Объём'},{k:'unit',h:'ед.'},{k:'method',h:'Метод'},{k:'date',h:'Дата'}
+];
+function addToBase(){
+  if(!lastReport){ alert('Сначала выполните расчёт.'); return; }
+  const r=lastReport;
+  samples.push({
+    id: ($('sampleId').value.trim())||('обр.'+(samples.length+1)),
+    regime: ($('sampleRegime').value.trim())||'—',
+    date: new Date().toLocaleString('ru-RU'),
+    porosity:+(r.porosity*100).toFixed(2), nPores:r.nPores,
+    meanD:+r.meanD.toFixed(r.meta.hasScale?3:1), medD:+r.medD.toFixed(r.meta.hasScale?3:1),
+    wall:+r.wallMean.toFixed(r.meta.hasScale?3:1),
+    wallDensity: r.calMatDensity!=null?+r.calMatDensity.toFixed(3):(r.trueDensity!=null?+r.trueDensity.toFixed(3):''),
+    bulkDensity: r.calBulkDensity!=null?+r.calBulkDensity.toFixed(3):(r.appDensity!=null?+r.appDensity.toFixed(3):''),
+    vol: r.volTotal!=null?+r.volTotal.toFixed(3):'',
+    dimX:+r.dimX.toFixed(2), dimY:+r.dimY.toFixed(2),
+    nSlices:r.meta.nSlices, unit:r.unitLen,
+    method:(r.meta.pore3D?'3D':'2D')+(r.meta.poreSep==='watershed'?'+ws':'')+'/'+(r.meta.wallMethod==='local'?'LT':'EDT'),
+    thr:r.meta.thr.join('|'), voxel:r.meta.hasScale?+r.meta.voxel.toFixed(4):''
+  });
+  saveSamples(); renderSamples();
+  $('basePanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function renderSamples(){
+  const n=samples.length;
+  $('baseCount').textContent = n? n+(n%10===1&&n%100!==11?' образец':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?' образца':' образцов')) : '';
+  $('baseCount').style.display = n? '' : 'none';
+  if(!n){ $('baseEmpty').style.display=''; $('baseTableWrap').style.display='none'; $('baseBtns').style.display='none'; return; }
+  $('baseEmpty').style.display='none'; $('baseTableWrap').style.display=''; $('baseBtns').style.display='';
+  const esc=s=>String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  let html='<thead><tr><th>#</th>'+BASE_COLS.map(c=>`<th>${c.h}</th>`).join('')+'<th></th></tr></thead><tbody>';
+  samples.forEach((s,i)=>{ html+='<tr><td>'+(i+1)+'</td>'+BASE_COLS.map(c=>{
+    const v=s[c.k]; const cls=(typeof v==='number')?'val':''; return `<td class="${cls}">${esc(v)}</td>`; }).join('')+`<td class="del" data-i="${i}" title="удалить">✕</td></tr>`; });
+  html+='</tbody>';
+  $('baseTable').innerHTML=html;
+  $('baseTable').querySelectorAll('td.del').forEach(td=> td.addEventListener('click',()=>{ samples.splice(+td.dataset.i,1); saveSamples(); renderSamples(); }));
+}
+function exportBase(){
+  if(!samples.length) return;
+  const cols=['id','regime','date','porosity','nPores','meanD','medD','wall','wallDensity','bulkDensity','vol','dimX','dimY','nSlices','unit','voxel','thr','method'];
+  const head=['ID','режим','дата','пористость_%','число_пор','ср_диаметр','медиана_диаметр','толщина_стенок','плотность_стенок','кажущ_плотность','объём_см3','размер_X','размер_Y','срезов','единицы','воксель_мм','пороги','метод'];
+  const lines=[head.join(';')];
+  for(const s of samples) lines.push(cols.map(c=> s[c]==null?'':String(s[c])).join(';'));
+  dl(new Blob(['﻿'+lines.join('\n')],{type:'text/csv'}),'база_образцов_КТ.csv');
+}
+$('addToBase').addEventListener('click', addToBase);
+$('baseExport').addEventListener('click', exportBase);
+$('baseClear').addEventListener('click', ()=>{ if(samples.length && confirm('Очистить всю базу образцов? ('+samples.length+' шт)')){ samples=[]; saveSamples(); renderSamples(); } });
+renderSamples();
+
+// ======================= Навигация по срезам =======================
+function showSlice(idx){
+  if(!lastReport || !state.slices[idx]) return;
+  let src=state.slices[idx];
+  if(lastReport.cropBox){ const c=cropSlice(src.gray,src.w,src.h,lastReport.cropBox); src={w:c.w,h:c.h,gray:c.gray}; }
+  const w=src.w, h=src.h, thr=lastReport.meta.thr, nClasses=lastReport.meta.nClasses;
+  const gray = lastReport.lut ? applyLut(src.gray, lastReport.lut) : src.gray;
+  const material=new Uint8Array(w*h); for(let i=0;i<w*h;i++) material[i]=gray[i]>thr[0]?1:0;
+  const bg=findBackground(material,w,h);
+  const rp=lastReport.roiParams, rcx=w/2, rcy=h/2, rr=rp?(rp.pct/100)*Math.min(w,h)/2:0, rr2=rr*rr;
+  const cls=new Uint8Array(w*h); let por=0,obj=0;
+  for(let i=0;i<w*h;i++){ if(rp){ const x=i%w,y=(i/w)|0; if((x-rcx)*(x-rcx)+(y-rcy)*(y-rcy)>rr2){cls[i]=0;continue;} }
+    if(bg[i]){cls[i]=0;continue;} const g=gray[i];
+    if(g<=thr[0]){cls[i]=1;por++;} else if(nClasses===3&&g>thr[1])cls[i]=3; else cls[i]=2; obj++; }
+  lastReport.primary={w,h,gray,cls,thr,nClasses,comps:(lastReport.primary&&lastReport.primary.comps)||[]};
+  const rows=Math.min(60,h),prof=[];
+  for(let rr=0;rr<rows;rr++){ const y0=Math.floor(rr/rows*h),y1=Math.floor((rr+1)/rows*h); let mat=0,o=0,sum=0;
+    for(let y=y0;y<y1;y++)for(let x=0;x<w;x++){ const c=cls[y*w+x]; if(!c)continue; o++; sum+=gray[y*w+x]; if(c===2||c===3)mat++; }
+    prof.push({frac:o?mat/o:0, bright:o?sum/o:0}); }
+  lastReport.profile=prof;
+  drawSegmentation(lastReport); drawPseudocolor(lastReport); drawProfile(lastReport);
+  $('sliceLabel').textContent=(idx+1)+' / '+state.slices.length;
+  $('slicePor').textContent='пористость среза: '+(obj?(por/obj*100).toFixed(1):'0')+' %';
+}
+$('sliceSlider').addEventListener('input', ()=> showSlice(parseInt($('sliceSlider').value,10)));
+
+// ROI radius slider
+$('optROI').addEventListener('change', ()=>{ $('roiRow').style.display = $('optROI').checked?'':'none'; });
+$('roiPct').addEventListener('input', ()=>{ $('roiPctV').textContent=$('roiPct').value+'%'; });
+
+// опции пересчитывают результат на лету (если расчёт уже выполнен)
+const rerunIfDone=()=>{ if(state.slices.length && lastReport) runAnalysis(); };
+['optWatershed','optLocalTh','optPercentile','optROI'].forEach(id=> $(id).addEventListener('change', rerunIfDone));
+$('roiPct').addEventListener('change', ()=>{ if($('optROI').checked) rerunIfDone(); });
+
+// LUT palette: перерисовать псевдоцветовую карту (без пересчёта)
+$('lutSelect').addEventListener('change', ()=>{ lutPalette=$('lutSelect').value; if(lastReport) drawPseudocolor(lastReport); });
+
+// ---- калибровка: подставить яркости классов ----
+$('calFromClasses').addEventListener('click', ()=>{
+  if(!lastReport||!lastReport.clsBright){ $('calNote').textContent='Сначала выполните расчёт — программе нужны средние яркости классов.'; return; }
+  const b=lastReport.clsBright;
+  $('calB1').value=Math.round(b.air); $('calB2').value=Math.round(b.mat); $('calB3').value=Math.round(b.dense);
+  $('calNote').innerHTML='Яркости подставлены: воздух <b>'+Math.round(b.air)+'</b>, материал <b>'+Math.round(b.mat)+'</b>, плотный <b>'+Math.round(b.dense)+'</b>. Впишите их известные плотности и пересчитайте.';
+});
+
+// ---- RAW-объём: диалог размеров ----
+let rawPending=null;
+function openRawDialog(f){ rawPending=f; $('rawFileName').textContent=f.name; $('rawErr').textContent=''; $('rawModal').classList.add('on'); }
+$('rawCancel').addEventListener('click', ()=>{ $('rawModal').classList.remove('on'); rawPending=null; });
+$('rawLoad').addEventListener('click', async ()=>{
+  if(!rawPending) return;
+  const w=parseInt($('rawW').value,10), h=parseInt($('rawH').value,10), d=parseInt($('rawD').value,10)||1;
+  if(!w||!h){ $('rawErr').textContent='Укажите ширину и высоту.'; return; }
+  try{
+    const buf=await rawPending.arrayBuffer();
+    addPages(volumeToPages(buf, $('rawType').value, $('rawEndian').value==='le', w, h, d), rawPending.name);
+    $('rawModal').classList.remove('on'); rawPending=null; refreshSlices();
+  }catch(err){ $('rawErr').textContent = err.message||String(err); }
+});
+
+// --- авто-калибровка масштаба по известному габариту изделия ---
+// Голое изображение не содержит абсолютного масштаба; нужен один опорный размер.
+// Программа сама находит изделие (заливкой фона) и меряет его ширину в пикселях.
+function measureObjectWidthPx(slice, nClasses){
+  const {w,h,gray}=slice;
+  const hg=buildHistogram(gray,null);
+  const thr=multiOtsu(hg.h,hg.n,nClasses);
+  const material=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++) material[i]= gray[i]>thr[0] ?1:0;
+  const bg=findBackground(material,w,h);
+  let minx=1e9,maxx=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ if(!bg[y*w+x]){ if(x<minx)minx=x; if(x>maxx)maxx=x; } }
+  return maxx>=minx ? (maxx-minx+1) : 0;
+}
+// найти прямоугольник изделия = bbox самой большой связной области ярких пикселей
+// (порог по верхней границе 3-классового Оцу — отсекает пустое поле и лучи FDK)
+function findObjectBBox(gray,w,h){
+  const hg=buildHistogram(gray,null); const thr=multiOtsu(hg.h,hg.n,3); const tHi=thr[1]||thr[0];
+  const mask=new Uint8Array(w*h); for(let i=0;i<w*h;i++) mask[i]= gray[i]>tHi?1:0;
+  const cc=connectedComponents(mask,w,h);
+  let best=0,bb=null; for(let c=1;c<cc.comps.length;c++){ if(cc.comps[c].size>best){ best=cc.comps[c].size; bb=cc.comps[c].bbox; } }
+  if(!bb || best<50) return null;
+  const mx=Math.round((bb[2]-bb[0])*0.25)+6, my=Math.round((bb[3]-bb[1])*0.25)+6;
+  return [Math.max(0,bb[0]-mx), Math.max(0,bb[1]-my), Math.min(w-1,bb[2]+mx), Math.min(h-1,bb[3]+my)];
+}
+// обрезать срез до bbox + поля и растянуть контраст внутри (нормализация внутри изделия)
+function cropSlice(gray,w,h,box){
+  const [x0,y0,x1,y1]=box, cw=x1-x0+1, ch=y1-y0+1;
+  const g=new Float32Array(cw*ch);
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++) g[y*cw+x]= gray[(y0+y)*w+(x0+x)];
+  let mn=1e20,mx=-1e20; for(let i=0;i<g.length;i++){ if(g[i]<mn)mn=g[i]; if(g[i]>mx)mx=g[i]; }
+  const rng=(mx>mn)?mx-mn:1; for(let i=0;i<g.length;i++) g[i]=(g[i]-mn)/rng*255;
+  return {w:cw,h:ch,gray:g};
+}
+function autoScale(){
+  if(!state.slices.length){ $('autoNote').textContent='Сначала загрузите срез или демо-образец.'; return; }
+  const knownW=parseFloat($('knownW').value);
+  if(!(knownW>0)){ $('autoNote').textContent='Введите реальную ширину изделия в мм.'; return; }
+  const wpx=measureObjectWidthPx(state.slices[0], parseInt($('nclass').value,10));
+  if(wpx<=0){ $('autoNote').textContent='Не удалось выделить изделие на срезе.'; return; }
+  const voxel=knownW/wpx;
+  $('voxel').value=voxel.toFixed(4);
+  $('autoNote').innerHTML='Ширина изделия ≈ '+wpx+' px → размер вокселя <b>'+voxel.toFixed(4)+' мм/px</b>';
+}
+
+async function handleFiles(list){
+  const files=[...list]; if(!files.length) return;
+  state.stackStep=1;
+  const used=new Set();
+  const ext=f=>(f.name.split('.').pop()||'').toLowerCase();
+  const base=f=>f.name.replace(/\.[^.]+$/,'').toLowerCase();
+  const sibling=(f,exts)=> files.find(g=> g!==f && base(g)===base(f) && exts.includes(ext(g)));
+
+  // 0) большой стек срезов (папка или многофайловый выбор): прореживание + прогресс
+  const stackImgs = files.filter(f=>{ const e=ext(f); return e==='tif'||e==='tiff'||['png','jpg','jpeg','bmp'].includes(e); });
+  if(stackImgs.length > 20){
+    // сначала логи (для авто-вокселя)
+    for(const lf of files.filter(f=>ext(f)==='log')){ try{ applyScanLogSilent(parseScanLog(await lf.text())); }catch(e){} }
+    stackImgs.sort((a,b)=> a.name.localeCompare(b.name, undefined, {numeric:true}));
+    const maxN=Math.max(2, parseInt($('maxSlices').value,10)||120);
+    const step= stackImgs.length>maxN ? Math.ceil(stackImgs.length/maxN) : 1;
+    state.stackStep=step;   // эффективный шаг срезов = заданный × прореживание
+    const picked=[]; for(let i=0;i<stackImgs.length;i+=step) picked.push(stackImgs[i]);
+    for(let i=0;i<picked.length;i++){
+      $('sliceInfo').textContent='Загрузка стека: '+(i+1)+' / '+picked.length+'…';
+      try{ await loadOneFile(picked[i], i<8); }catch(e){}
+      if(i%4===0) await new Promise(r=>setTimeout(r,0));
+    }
+    refreshSlices();
+    if(state.slices.length) $('sliceInfo').textContent='Стек: '+state.slices.length+' срезов'+(step>1?' (каждый '+step+'-й из '+stackImgs.length+')':'')+' · '+state.slices[0].w+'×'+state.slices[0].h;
+    return;
+  }
+  // 1) парные форматы заголовок+данные: VGI+VOL, MHD+RAW
+  for(const f of files){
+    if(used.has(f)) continue;
+    try{
+      if(ext(f)==='vgi'){ const d=sibling(f,['vol','raw']); if(d){ used.add(f);used.add(d);
+        const r=await decodeVGI(await f.text(), await d.arrayBuffer()); addPages(r.pages,f.name); applyVoxel(r.voxel,'VGI'); continue; } }
+      if(ext(f)==='mhd'){ const d=sibling(f,['raw','zraw']); if(d){ used.add(f);used.add(d);
+        const r=await decodeMHDpair(await f.text(), await d.arrayBuffer()); addPages(r.pages,f.name); applyVoxel(r.voxel,'MHD'); continue; } }
+    }catch(err){ used.add(f); alert('«'+f.name+'»: '+(err&&err.message||err)); }
+  }
+  // 2) остальные по одному
+  for(const f of files){
+    if(used.has(f)) continue;
+    try{ await loadOneFile(f); }
+    catch(err){ alert('«'+f.name+'»: '+(err&&err.message? err.message : err)); }
+  }
+  refreshSlices();
+}
+async function loadOneFile(f, makeThumb){
+  if(makeThumb===undefined) makeThumb=true;
+  const name=f.name, lower=name.toLowerCase();
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  if(ext==='tif'||ext==='tiff'||f.type==='image/tiff'){ addPages(decodeTIFF(await f.arrayBuffer()), name, makeThumb); return; }
+  if(ext==='dcm'||ext==='dicom'|| await looksDICOM(f)){ const r=await decodeDICOM(await f.arrayBuffer()); addPages(r.pages,name); applyVoxel(r.voxel,'DICOM'); return; }
+  if(ext==='nrrd'){ const r=await decodeNRRD(await f.arrayBuffer()); addPages(r.pages,name); applyVoxel(r.voxel,'NRRD'); return; }
+  if(ext==='mha'){ const r=await decodeMHA(await f.arrayBuffer()); addPages(r.pages,name); applyVoxel(r.voxel,'MHA'); return; }
+  if(ext==='mhd') throw new Error('MHD ссылается на отдельный .raw — выберите оба файла (.mhd и .raw) вместе.');
+  if(lower.endsWith('.nii.gz')){ const r=await decodeNIfTI(await f.arrayBuffer(),true); addPages(r.pages,name); applyVoxel(r.voxel,'NIfTI'); return; }
+  if(ext==='nii'){ const r=await decodeNIfTI(await f.arrayBuffer(),false); addPages(r.pages,name); applyVoxel(r.voxel,'NIfTI'); return; }
+  if(ext==='raw'||ext==='vol'||ext==='img'){ openRawDialog(f); return; }   // сырой объём без заголовка → спросить размеры
+  if(ext==='log'){ applyScanLog(parseScanLog(await f.text())); return; }    // протокол реконструкции → авто-воксель
+  if(f.type.startsWith('video/')||['mp4','webm','mov','m4v','ogv','ogg','avi'].includes(ext)){ await loadVideo(f,name); return; }
+  if(f.type.startsWith('image/')||['png','jpg','jpeg','webp','bmp','gif'].includes(ext)){ await loadImage(f,name,makeThumb); return; }
+  throw new Error('формат не поддерживается. Доступно: PNG, JPG, BMP, TIFF, DICOM, NRRD, MHA/MHD, NIfTI, VGI+VOL, RAW, .log, видео.');
+}
+// ---- Volume Graphics .vgi (+ .vol) ----
+async function decodeVGI(text, volBuffer){
+  const F={};
+  for(const ln of text.split(/\r?\n/)){ const m=ln.match(/^\s*([A-Za-z][\w .]*?)\s*=\s*(.+?)\s*$/); if(m) F[m[1].trim().toLowerCase()]=m[2].trim(); }
+  const size=(F['size']||'').split(/\s+/).map(Number).filter(n=>!isNaN(n));
+  if(size.length<2) throw new Error('VGI: нет размеров (size)');
+  const bits=parseInt(F['bitsperelement']||'16',10);
+  const dt=(F['datatype']||'unsigned integer').toLowerCase();
+  let type;
+  if(dt.indexOf('float')>=0) type= bits>32?'double':'float';
+  else if(dt.indexOf('signed')>=0 && dt.indexOf('unsigned')<0) type= bits===8?'char':bits===16?'short':'int';
+  else type= bits===8?'uchar':bits===16?'ushort':'uint';
+  const res=(F['resolution']||'').split(/\s+/).map(Number).filter(n=>!isNaN(n));
+  return { pages:volumeToPages(volBuffer,type,true,size[0],size[1],size[2]||1), voxel:res[0]||0 };
+}
+// ---- MetaImage MHD (header) + .raw (data) ----
+async function decodeMHDpair(text, rawBuffer){
+  const F={}; for(const ln of text.split(/\r?\n/)){ const m=ln.match(/^([^=]+)=\s*(.*?)\s*$/); if(m) F[m[1].trim().toLowerCase()]=m[2].trim(); }
+  const dims=(F['dimsize']||'').split(/\s+/).map(Number); const w=dims[0],h=dims[1],depth=dims[2]||1;
+  if(!w||!h) throw new Error('MHD: нет DimSize');
+  const tmap={MET_UCHAR:'uchar',MET_CHAR:'char',MET_SHORT:'short',MET_USHORT:'ushort',MET_INT:'int',MET_UINT:'uint',MET_FLOAT:'float',MET_DOUBLE:'double'};
+  const type=tmap[(F['elementtype']||'MET_SHORT').toUpperCase()]||'short';
+  const le=(F['binarydatabyteordermsb']||'false').toLowerCase()!=='true';
+  let data=rawBuffer; if((F['compresseddata']||'false').toLowerCase()==='true') data=await inflate(rawBuffer,'deflate');
+  let voxel=0; if(F['elementspacing']) voxel=parseFloat(F['elementspacing'].split(/\s+/)[0])||0; else if(F['elementsize']) voxel=parseFloat(F['elementsize'].split(/\s+/)[0])||0;
+  return { pages:volumeToPages(data,type,le,w,h,depth), voxel };
+}
+function addPages(pages, base, makeThumb){ pages.forEach((p,i)=> addSliceFromGray(p.gray,p.w,p.h, base+(pages.length>1?` [${i+1}/${pages.length}]`:''), makeThumb!==false && state.slices.length<8)); }
+function applyVoxel(v, src){
+  if(v>0 && !$('voxel').value){
+    $('voxel').value=Number(v).toFixed(4);
+    if($('autoNote')) $('autoNote').innerHTML='Размер вокселя из '+src+': <b>'+Number(v).toFixed(4)+' мм</b>';
+  }
+}
+// ---- протокол реконструкции (.log, в т.ч. URL-кодированный) ----
+let lastLogMeta=null;
+function parseScanLog(text){
+  const dec=s=>{ try{ return decodeURIComponent(String(s).replace(/\+/g,' ')); }catch(e){ return s; } };
+  const F={};
+  text.split(/\r?\n/).forEach(ln=>{ const m=ln.match(/^([^=]+)=(.*)$/); if(m) F[dec(m[1]).trim().toLowerCase()]=dec(m[2]).trim(); });
+  let voxelMM=0, src='';
+  const vs=parseFloat(F['voxel size, mkm']);
+  if(vs>0){ voxelMM=vs/1000; src='Voxel Size '+vs+' мкм'; }
+  else { const pp=parseFloat(F['projection pixel size, mkm']); const mag=parseFloat(F['magnificent']||F['magnification']||'1')||1;
+    if(pp>0){ voxelMM=pp/mag/1000; src='пиксель '+pp+' мкм / увел. '+mag; } }
+  return {F, voxelMM, src};
+}
+function applyScanLogSilent(r){
+  lastLogMeta=r.F;
+  if(r.voxelMM>0){ $('voxel').value=r.voxelMM.toFixed(4);
+    if($('autoNote')) $('autoNote').innerHTML='Из лога ('+r.src+'): размер вокселя <b>'+r.voxelMM.toFixed(4)+' мм</b>'; }
+}
+function applyScanLog(r){
+  applyScanLogSilent(r);
+  const F=r.F;
+  alert('Лог реконструкции прочитан.\n'
+    +'Размер вокселя: '+(r.voxelMM>0? r.voxelMM.toFixed(4)+' мм':'не определён — задайте вручную')+'\n'
+    +'Напряжение/ток: '+(F['source voltage (kv)']||'?')+' кВ / '+(F['source current (ua)']||'?')+' мкА\n'
+    +'Проекций: '+(F['number of projection']||'?')+', алгоритм '+(F['algorithm']||'?')+'\n'
+    +'Размер кадра: '+(F['width, pix']||'?')+'×'+(F['height, pix']||'?')+', '+(F['data depth, bit']||'?')+' бит\n'
+    +'Теперь загрузите срезы (rec_*.tif).');
+}
+function loadImage(f,name,makeThumb){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ addSlice(img,name, makeThumb!==false && state.slices.length<8); res(); }; img.onerror=()=>res(); img.src=URL.createObjectURL(f); }); }
+async function looksDICOM(f){
+  try{ const b=new Uint8Array(await f.slice(0,132).arrayBuffer());
+    return b.length>=132 && b[128]===0x44&&b[129]===0x49&&b[130]===0x43&&b[131]===0x4D; }catch(e){ return false; }
+}
+
+// ---- видео → кадры → стек срезов (только для покадровой записи срезов, не для 3D-рендера) ----
+function loadVideo(f,name){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(f);
+    const vid=document.createElement('video'); vid.muted=true; vid.preload='auto'; vid.crossOrigin='anonymous'; vid.src=url;
+    vid.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('браузер не смог открыть это видео (кодек). Несжатый AVI браузер не декодирует — экспортируйте кадры в TIFF/PNG (ffmpeg) или используйте MP4/WebM.')); };
+    vid.onloadedmetadata=async ()=>{
+      const dur=vid.duration, vw=vid.videoWidth, vh=vid.videoHeight;
+      if(!vw||!vh||!isFinite(dur)||dur<=0){ URL.revokeObjectURL(url); reject(new Error('не удалось прочитать параметры видео')); return; }
+      const N=Math.min(80, Math.max(2, Math.round(dur*5)));   // ~5 кадров/сек, не более 80
+      const cv=document.createElement('canvas'); cv.width=vw; cv.height=vh; const ctx=cv.getContext('2d');
+      const seek=t=>new Promise(r=>{ const h=()=>{ vid.removeEventListener('seeked',h); r(); }; vid.addEventListener('seeked',h); vid.currentTime=t; });
+      try{
+        for(let k=0;k<N;k++){
+          await seek(dur*(k+0.5)/N);
+          ctx.drawImage(vid,0,0,vw,vh);
+          const d=ctx.getImageData(0,0,vw,vh).data;
+          const gray=new Float32Array(vw*vh);
+          for(let i=0,p=0;i<gray.length;i++,p+=4) gray[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+          addSliceFromGray(gray,vw,vh, name+` [кадр ${k+1}/${N}]`);
+        }
+        URL.revokeObjectURL(url); resolve();
+      }catch(e){ URL.revokeObjectURL(url); reject(new Error('ошибка извлечения кадров: '+e.message)); }
+    };
+  });
+}
+
+function addSlice(img, name, makeThumb){
+  // downscale to processing size
+  let {width:w, height:h} = img;
+  const sc = Math.min(1, MAXDIM/Math.max(w,h));
+  w = Math.max(1, Math.round(w*sc)); h = Math.max(1, Math.round(h*sc));
+  const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx = cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+  const d = ctx.getImageData(0,0,w,h).data;
+  const gray = new Float32Array(w*h);
+  for(let i=0,p=0;i<gray.length;i++,p+=4){
+    gray[i] = 0.299*d[p] + 0.587*d[p+1] + 0.114*d[p+2];
+  }
+  state.slices.push({ name, w, h, gray, displayURL: makeThumb!==false? cv.toDataURL():null, downscale: 1/sc });
+}
+
+// добавить срез из готового массива яркости (для TIFF и др. сырых форматов)
+function addSliceFromGray(gray, w, h, name, makeThumb){
+  const sc=Math.min(1, MAXDIM/Math.max(w,h));
+  let nw=w, nh=h, g=gray;
+  if(sc<1){
+    nw=Math.max(1,Math.round(w*sc)); nh=Math.max(1,Math.round(h*sc));
+    g=new Float32Array(nw*nh);
+    for(let y=0;y<nh;y++)for(let x=0;x<nw;x++){
+      const sx=Math.min(w-1,Math.floor(x/sc)), sy=Math.min(h-1,Math.floor(y/sc));
+      g[y*nw+x]=gray[sy*w+sx];
+    }
+  }
+  let displayURL=null;
+  if(makeThumb!==false){
+    const cv=document.createElement('canvas'); cv.width=nw; cv.height=nh;
+    const ctx=cv.getContext('2d'); const im=ctx.createImageData(nw,nh);
+    for(let i=0,j=0;i<nw*nh;i++,j+=4){ const v=Math.max(0,Math.min(255,g[i]|0)); im.data[j]=im.data[j+1]=im.data[j+2]=v; im.data[j+3]=255; }
+    ctx.putImageData(im,0,0); displayURL=cv.toDataURL();
+  }
+  state.slices.push({ name, w:nw, h:nh, gray:g, displayURL, downscale: 1/Math.min(1,sc) });
+}
+
+// ---------- TIFF-декодер (без зависимостей) ----------
+// Поддержка: без сжатия и PackBits, 8/16 бит, grayscale и RGB, оба порядка байт,
+// многостраничный (каждая страница → отдельный срез стека). Тайлы/LZW/JPEG/BigTIFF — нет.
+function packbitsDecode(src){
+  const out=[]; let i=0;
+  while(i<src.length){
+    let n=src[i++];
+    if(n===128) continue;
+    if(n<128){ for(let j=0;j<=n && i<src.length;j++) out.push(src[i++]); }
+    else { const b=src[i++]; const rep=257-n; for(let j=0;j<rep;j++) out.push(b); }
+  }
+  return new Uint8Array(out);
+}
+// TIFF-вариант LZW: MSB-first, коды 9–12 бит, Clear=256, EOI=257, early-change
+function lzwDecodeTIFF(src){
+  const CLEAR=256, EOI=257; const out=[];
+  let dict, next, codeSize, prev;
+  const reset=()=>{ dict=new Array(258); for(let i=0;i<256;i++) dict[i]=[i]; next=258; codeSize=9; prev=null; };
+  reset();
+  let bitBuf=0, bitCnt=0, pos=0;
+  const nextCode=()=>{ while(bitCnt<codeSize){ if(pos>=src.length) return EOI; bitBuf=(bitBuf<<8)|src[pos++]; bitCnt+=8; } bitCnt-=codeSize; return (bitBuf>>>bitCnt)&((1<<codeSize)-1); };
+  let code;
+  while((code=nextCode())!==EOI){
+    if(code===CLEAR){ reset(); continue; }
+    let entry;
+    if(prev===null){ entry=dict[code]; for(const b of entry) out.push(b); prev=entry; continue; }
+    if(code<next && dict[code]) entry=dict[code];
+    else entry=prev.concat(prev[0]);          // KwKwK
+    for(const b of entry) out.push(b);
+    dict[next++]=prev.concat(entry[0]);
+    if(next===((1<<codeSize)-1) && codeSize<12) codeSize++;   // early change
+    prev=entry;
+  }
+  return new Uint8Array(out);
+}
+// горизонтальный предиктор (TIFF Predictor=2): обратное разностное кодирование по строкам
+function applyHPredictor(bytes, w, h, spp, bits, le){
+  if(bits===8){
+    for(let y=0;y<h;y++){ const base=y*w*spp;
+      for(let x=1;x<w;x++) for(let c=0;c<spp;c++){ const o=base+x*spp+c; bytes[o]=(bytes[o]+bytes[o-spp])&255; } }
+  } else {
+    for(let y=0;y<h;y++){ const base=y*w*spp*2;
+      for(let x=1;x<w;x++) for(let c=0;c<spp;c++){
+        const o=base+(x*spp+c)*2, op=o-spp*2;
+        const cur= le?(bytes[o]|(bytes[o+1]<<8)):((bytes[o]<<8)|bytes[o+1]);
+        const prv= le?(bytes[op]|(bytes[op+1]<<8)):((bytes[op]<<8)|bytes[op+1]);
+        const v=(cur+prv)&0xFFFF;
+        if(le){ bytes[o]=v&255; bytes[o+1]=(v>>8)&255; } else { bytes[o]=(v>>8)&255; bytes[o+1]=v&255; }
+      } }
+  }
+}
+function decodeTIFF(buffer){
+  const dv=new DataView(buffer);
+  if(dv.byteLength<8) throw new Error('файл слишком мал');
+  const b0=dv.getUint8(0), b1=dv.getUint8(1);
+  let le;
+  if(b0===0x49&&b1===0x49) le=true;
+  else if(b0===0x4D&&b1===0x4D) le=false;
+  else throw new Error('не TIFF (нет сигнатуры II/MM)');
+  const magic=dv.getUint16(2,le);
+  if(magic===43) throw new Error('BigTIFF не поддерживается');
+  if(magic!==42) throw new Error('не TIFF (неверная сигнатура)');
+  const u16=o=>dv.getUint16(o,le), u32=o=>dv.getUint32(o,le);
+  const r16=(arr,o)=> le? (arr[o]|(arr[o+1]<<8)) : ((arr[o]<<8)|arr[o+1]);
+  let ifd=u32(4); const pages=[]; let guard=0;
+  while(ifd && guard++<10000){
+    const n=u16(ifd); const E={};
+    for(let i=0;i<n;i++){
+      const e=ifd+2+i*12;
+      const tag=u16(e), type=u16(e+2), count=u32(e+4);
+      const tsz={1:1,2:1,3:2,4:4,5:8,6:1,7:1,8:2,9:4,10:8,11:4,12:8}[type]||1;
+      const base= (tsz*count)<=4 ? e+8 : u32(e+8);
+      const arr=[];
+      for(let j=0;j<count;j++){
+        const o=base+j*tsz;
+        if(type===3) arr.push(dv.getUint16(o,le));
+        else if(type===4) arr.push(dv.getUint32(o,le));
+        else arr.push(dv.getUint8(o));
+      }
+      E[tag]=arr;
+    }
+    const get=(t,d)=> (E[t]&&E[t].length)? E[t] : d;
+    const w=get(256,[0])[0]|0, h=get(257,[0])[0]|0;
+    const bits=get(258,[1])[0];
+    const comp=get(259,[1])[0];
+    const photo=get(262,[1])[0];
+    const spp=get(277,[1])[0];
+    const predictor=get(317,[1])[0];
+    const tileW=E[322]?E[322][0]:0, tileH=E[323]?E[323][0]:0;
+    if(comp!==1 && comp!==5 && comp!==32773) throw new Error('сжатие TIFF #'+comp+' не поддерживается (нужно: без сжатия, LZW или PackBits)');
+    if(bits!==8 && bits!==16) throw new Error(bits+'-бит TIFF не поддерживается (нужно 8 или 16)');
+    if(!w || !h) throw new Error('нет размеров изображения');
+    const bpp=bits/8, rowBytes=w*spp*bpp;
+    const decomp=(off,cnt)=>{ const raw=new Uint8Array(buffer, off, Math.min(cnt, dv.byteLength-off));
+      return comp===5? lzwDecodeTIFF(raw) : comp===32773? packbitsDecode(raw) : raw; };
+    const tmp=new Float64Array(w*h);
+    const putRegion=(src, regW, regH, ox, oy)=>{
+      const bytes = predictor===2 ? src.slice() : src;   // clone before un-predicting
+      if(predictor===2) applyHPredictor(bytes, regW, regH, spp, bits, le);
+      for(let ry=0;ry<regH;ry++){ const gy=oy+ry; if(gy>=h) break;
+        for(let rx=0;rx<regW;rx++){ const gx=ox+rx; if(gx>=w) continue;
+          const bo=(ry*regW+rx)*spp*bpp; let g;
+          if(spp>=3){ const r=bits===8?bytes[bo]:r16(bytes,bo), gg=bits===8?bytes[bo+bpp]:r16(bytes,bo+bpp), bb=bits===8?bytes[bo+2*bpp]:r16(bytes,bo+2*bpp); g=0.299*r+0.587*gg+0.114*bb; }
+          else g= bits===8? bytes[bo] : r16(bytes,bo);
+          tmp[gy*w+gx]=g;
+        }
+      }
+    };
+    if(tileW && tileH && E[324]){
+      const tOff=E[324], tCnt=E[325]||[]; const tilesX=Math.ceil(w/tileW);
+      let ti=0;
+      for(let ty=0;ty<Math.ceil(h/tileH);ty++)for(let tx=0;tx<tilesX;tx++){
+        if(ti>=tOff.length) break;
+        putRegion(decomp(tOff[ti], tCnt[ti]!==undefined?tCnt[ti]:tileW*tileH*spp*bpp), tileW, tileH, tx*tileW, ty*tileH); ti++;
+      }
+    } else {
+      const stripOff=get(273,[]); const stripCnt=get(279,[]); const rps=get(278,[h])[0]||h;
+      if(!stripOff.length) throw new Error('нет данных изображения (StripOffsets)');
+      for(let s=0;s<stripOff.length;s++){
+        const rowsThis=Math.min(rps, h-s*rps); if(rowsThis<=0) break;
+        putRegion(decomp(stripOff[s], stripCnt[s]!==undefined?stripCnt[s]:rowsThis*rowBytes), w, rowsThis, 0, s*rps);
+      }
+    }
+    let mn=Infinity,mx=-Infinity;
+    for(let i=0;i<w*h;i++){ const v=tmp[i]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    const rng=(mx>mn)?(mx-mn):1;
+    const gray=new Float32Array(w*h);
+    for(let i=0;i<w*h;i++){ let v=(tmp[i]-mn)/rng*255; if(photo===0) v=255-v; gray[i]=v; }
+    pages.push({w,h,gray,bits,comp});
+    ifd=u32(ifd+2+n*12);
+  }
+  if(!pages.length) throw new Error('изображения не найдены');
+  return pages;
+}
+
+// ===================== Общее ядро воксельных форматов =====================
+// gzip/deflate через встроенный DecompressionStream (есть в современных браузерах и Node 18+)
+async function inflate(buffer, format){
+  const ds=new DecompressionStream(format);
+  const stream=new Response(buffer).body.pipeThrough(ds);
+  return await new Response(stream).arrayBuffer();
+}
+// чтение типизированного значения из DataView
+function readerForType(dv, type, le){
+  const t=String(type).replace(/[\s_]/g,'').toLowerCase();
+  const M={
+    uchar:[1,o=>dv.getUint8(o)], uint8:[1,o=>dv.getUint8(o)], unsignedchar:[1,o=>dv.getUint8(o)],
+    char:[1,o=>dv.getInt8(o)], int8:[1,o=>dv.getInt8(o)], signedchar:[1,o=>dv.getInt8(o)],
+    short:[2,o=>dv.getInt16(o,le)], int16:[2,o=>dv.getInt16(o,le)], signedshort:[2,o=>dv.getInt16(o,le)],
+    ushort:[2,o=>dv.getUint16(o,le)], uint16:[2,o=>dv.getUint16(o,le)], unsignedshort:[2,o=>dv.getUint16(o,le)],
+    int:[4,o=>dv.getInt32(o,le)], int32:[4,o=>dv.getInt32(o,le)],
+    uint:[4,o=>dv.getUint32(o,le)], uint32:[4,o=>dv.getUint32(o,le)],
+    float:[4,o=>dv.getFloat32(o,le)], float32:[4,o=>dv.getFloat32(o,le)],
+    double:[8,o=>dv.getFloat64(o,le)], float64:[8,o=>dv.getFloat64(o,le)],
+  };
+  const e=M[t]; if(!e) throw new Error('тип данных «'+type+'» не поддерживается');
+  return { size:e[0], read:i=>e[1](i*e[0]) };
+}
+// объём (raw) → массив страниц-срезов с глобальной нормализацией яркости 0..255
+function volumeToPages(dataBuffer, type, le, w, h, depth){
+  const dv=new DataView(dataBuffer);
+  const {size,read}=readerForType(dv,type,le);
+  const slicePx=w*h, N=slicePx*depth;
+  if(N*size>dv.byteLength+8) throw new Error('размер данных не совпадает с размерами '+w+'×'+h+'×'+depth);
+  let mn=Infinity,mx=-Infinity;
+  for(let i=0;i<N;i++){ const v=read(i); if(v<mn)mn=v; if(v>mx)mx=v; }
+  const rng=(mx>mn)?(mx-mn):1;
+  const pages=[];
+  for(let z=0;z<depth;z++){
+    const gray=new Float32Array(slicePx);
+    for(let i=0;i<slicePx;i++) gray[i]=(read(z*slicePx+i)-mn)/rng*255;
+    pages.push({w,h,gray});
+  }
+  return pages;
+}
+
+// ===================== NRRD =====================
+async function decodeNRRD(buffer){
+  const bytes=new Uint8Array(buffer);
+  let hdrEnd=-1;
+  for(let i=0;i<bytes.length-1;i++){ if(bytes[i]===10 && bytes[i+1]===10){ hdrEnd=i+2; break; } }
+  if(hdrEnd<0) throw new Error('не найден конец заголовка NRRD');
+  const header=new TextDecoder().decode(bytes.subarray(0,hdrEnd));
+  const lines=header.split(/\r?\n/);
+  if(!/^NRRD\d/.test(lines[0])) throw new Error('не NRRD');
+  const F={};
+  for(const ln of lines.slice(1)){ const m=ln.match(/^([^:#][^:]*):[=\s]?\s*(.*)$/); if(m) F[m[1].trim().toLowerCase()]=m[2].trim(); }
+  const type=F['type']||'short';
+  const sizes=(F['sizes']||'').split(/\s+/).map(Number).filter(n=>!isNaN(n));
+  const dim=parseInt(F['dimension']||sizes.length,10);
+  if(sizes.length<2) throw new Error('в NRRD нет размеров (sizes)');
+  const enc=(F['encoding']||'raw').toLowerCase();
+  const le=(F['endian']||'little').toLowerCase()!=='big';
+  const w=sizes[0], h=sizes[1], depth=dim>=3?(sizes[2]||1):1;
+  let data=buffer.slice(hdrEnd);
+  if(enc==='gzip'||enc==='gz') data=await inflate(data,'gzip');
+  else if(enc==='raw'){} else throw new Error('кодировка NRRD «'+enc+'» не поддерживается (нужно raw или gzip)');
+  let voxel=0;
+  if(F['spacings']) voxel=parseFloat(F['spacings'].split(/\s+/)[0])||0;
+  else if(F['space directions']){ const m=F['space directions'].match(/\(([^)]+)\)/); if(m){ const v=m[1].split(',').map(Number); voxel=Math.hypot(v[0]||0,v[1]||0,v[2]||0)||0; } }
+  return { pages:volumeToPages(data,type,le,w,h,depth), voxel };
+}
+
+// ===================== MetaImage (.mha / .mhd) =====================
+async function decodeMHA(buffer){
+  const bytes=new Uint8Array(buffer);
+  const text=new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length,200000)));
+  const F={}; let dataStart=-1, consumed=0;
+  for(const ln of text.split('\n')){
+    consumed+=ln.length+1;
+    const m=ln.match(/^([^=]+)=\s*(.*?)\s*$/);
+    if(m){ const k=m[1].trim().toLowerCase(); F[k]=m[2].trim(); if(k==='elementdatafile'){ dataStart=consumed; break; } }
+  }
+  if((F['elementdatafile']||'').toUpperCase()!=='LOCAL') throw new Error('MHD со ссылкой на отдельный .raw: загрузите единый .mha');
+  const dims=(F['dimsize']||'').split(/\s+/).map(Number);
+  const w=dims[0], h=dims[1], depth=dims[2]||1;
+  if(!w||!h) throw new Error('в MHA нет DimSize');
+  const tmap={MET_UCHAR:'uchar',MET_CHAR:'char',MET_SHORT:'short',MET_USHORT:'ushort',MET_INT:'int',MET_UINT:'uint',MET_FLOAT:'float',MET_DOUBLE:'double'};
+  const type=tmap[(F['elementtype']||'MET_SHORT').toUpperCase()]||'short';
+  const le=(F['binarydatabyteordermsb']||'false').toLowerCase()!=='true';
+  const compressed=(F['compresseddata']||'false').toLowerCase()==='true';
+  let data=buffer.slice(dataStart);
+  if(compressed) data=await inflate(data,'deflate');
+  let voxel=0;
+  if(F['elementspacing']) voxel=parseFloat(F['elementspacing'].split(/\s+/)[0])||0;
+  else if(F['elementsize']) voxel=parseFloat(F['elementsize'].split(/\s+/)[0])||0;
+  return { pages:volumeToPages(data,type,le,w,h,depth), voxel };
+}
+
+// ===================== NIfTI-1 (.nii / .nii.gz) =====================
+async function decodeNIfTI(buffer, gz){
+  let buf= gz ? await inflate(buffer,'gzip') : buffer;
+  const dvL=new DataView(buf);
+  let le=true;
+  if(dvL.getInt32(0,true)!==348){ if(dvL.getInt32(0,false)===348) le=false; else throw new Error('не NIfTI-1 (sizeof_hdr≠348)'); }
+  const dv=dvL;
+  const i16=o=>dv.getInt16(o,le), f32=o=>dv.getFloat32(o,le);
+  const magic=String.fromCharCode(dv.getUint8(344),dv.getUint8(345),dv.getUint8(346));
+  if(magic[0]!=='n') throw new Error('NIfTI: нет сигнатуры n+1/ni1');
+  if(magic==='ni1') throw new Error('NIfTI с отдельным .img не поддерживается (нужен единый .nii)');
+  const w=i16(42), h=i16(44), depth=i16(46)||1;
+  const datatype=i16(70);
+  const dtmap={2:'uchar',4:'short',8:'int',16:'float',64:'double',256:'char',512:'ushort',768:'uint'};
+  const type=dtmap[datatype]; if(!type) throw new Error('тип данных NIfTI #'+datatype+' не поддерживается');
+  const voxel=f32(80)||0;                 // pixdim[1]
+  const voxOffset=Math.round(f32(108))||352;
+  if(!w||!h) throw new Error('в NIfTI нет размеров');
+  return { pages:volumeToPages(buf.slice(voxOffset),type,le,w,h,depth), voxel };
+}
+
+// ===================== DICOM (несжатый) =====================
+// DICOM RLE: 64-байтовый заголовок (число сегментов + смещения), сегменты PackBits.
+function dicomRLE(bytes, N, bits, pixRep){
+  const dv=new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const nSeg=dv.getUint32(0,true);
+  const offs=[]; for(let i=0;i<15;i++) offs.push(dv.getUint32(4+i*4,true));
+  const seg=[]; for(let s=0;s<nSeg;s++){ const start=offs[s], end=(s+1<nSeg?offs[s+1]:bytes.length); seg.push(packbitsDecode(bytes.subarray(start,end))); }
+  const out=new Float64Array(N);
+  if(bits<=8){ const a=seg[0]||[]; for(let i=0;i<N;i++){ let v=a[i]||0; if(pixRep&&v>127)v-=256; out[i]=v; } }
+  else { const hi=seg[0]||[], lo=seg[1]||[]; for(let i=0;i<N;i++){ let v=((hi[i]||0)<<8)|(lo[i]||0); if(pixRep&&v>32767)v-=65536; out[i]=v; } }
+  return out;
+}
+// JPEG-фрагмент → яркость (нативный декодер браузера; работает для JPEG baseline 8-бит)
+async function jpegBytesToGray(bytes){
+  const blob=new Blob([bytes],{type:'image/jpeg'});
+  const bmp=await createImageBitmap(blob);
+  const cv=document.createElement('canvas'); cv.width=bmp.width; cv.height=bmp.height;
+  const ctx=cv.getContext('2d'); ctx.drawImage(bmp,0,0);
+  const d=ctx.getImageData(0,0,bmp.width,bmp.height).data;
+  const gray=new Float32Array(bmp.width*bmp.height);
+  for(let i=0,p=0;i<gray.length;i++,p+=4) gray[i]=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
+  return {w:bmp.width,h:bmp.height,gray};
+}
+async function decodeDICOM(buffer){
+  const dv=new DataView(buffer);
+  if(!(dv.byteLength>132 && dv.getUint8(128)===0x44&&dv.getUint8(129)===0x49&&dv.getUint8(130)===0x43&&dv.getUint8(131)===0x4D))
+    throw new Error('не DICOM Part-10 (нет преамбулы DICM)');
+  let pos=132, explicitVR=true, le=true, switched=false;
+  let transfer='1.2.840.10008.1.2.1', metaCount=0;
+  let rows=0,cols=0,bits=16,spp=1,pixRep=0,frames=1,photo='MONOCHROME2',slope=1,inter=0,spacing=0;
+  let uncPixOff=-1, fragments=null;
+  const txt=(o,l)=> new TextDecoder('latin1').decode(new Uint8Array(buffer,o,l)).replace(/\0+$/,'').trim();
+  while(pos+8<=dv.byteLength){
+    if(!switched){
+      const g=dv.getUint16(pos,le);
+      if(g!==0x0002 && metaCount>0){
+        switched=true;
+        if(transfer==='1.2.840.10008.1.2'){ explicitVR=false; le=true; }
+        else if(transfer==='1.2.840.10008.1.2.2'){ explicitVR=true; le=false; }
+        else { explicitVR=true; le=true; }   // все остальные (вкл. инкапсулированные) — Explicit VR LE
+      }
+    }
+    const group=dv.getUint16(pos,le), elem=dv.getUint16(pos+2,le); pos+=4;
+    let len;
+    if(explicitVR){
+      const vr=String.fromCharCode(dv.getUint8(pos),dv.getUint8(pos+1)); pos+=2;
+      if(['OB','OW','OF','SQ','UT','UN'].indexOf(vr)>=0){ pos+=2; len=dv.getUint32(pos,le); pos+=4; }
+      else { len=dv.getUint16(pos,le); pos+=2; }
+    } else { len=dv.getUint32(pos,le); pos+=4; }
+    if(group===0x7FE0 && elem===0x0010){
+      if(len===0xFFFFFFFF){                          // инкапсулированные (сжатые) данные
+        let p=pos;
+        const botLen=dv.getUint32(p+4,le); p+=8+botLen; // пропустить Basic Offset Table
+        const frags=[];
+        while(p+8<=dv.byteLength){ const t=dv.getUint16(p,le), e=dv.getUint16(p+2,le); if(t===0xFFFE&&e===0xE0DD) break;
+          const L=dv.getUint32(p+4,le); p+=8; frags.push({o:p,L}); p+=L; }
+        fragments=frags;
+      } else uncPixOff=pos;
+      break;
+    }
+    if(len===0xFFFFFFFF) throw new Error('DICOM с SQ неопределённой длины не поддерживается');
+    const vp=pos;
+    if(group===0x0002 && elem===0x0010) transfer=txt(vp,len);
+    else if(group===0x0028 && elem===0x0010) rows=dv.getUint16(vp,le);
+    else if(group===0x0028 && elem===0x0011) cols=dv.getUint16(vp,le);
+    else if(group===0x0028 && elem===0x0100) bits=dv.getUint16(vp,le);
+    else if(group===0x0028 && elem===0x0002) spp=dv.getUint16(vp,le);
+    else if(group===0x0028 && elem===0x0103) pixRep=dv.getUint16(vp,le);
+    else if(group===0x0028 && elem===0x0008) frames=parseInt(txt(vp,len),10)||1;
+    else if(group===0x0028 && elem===0x0004) photo=txt(vp,len);
+    else if(group===0x0028 && elem===0x0030) spacing=parseFloat(txt(vp,len).split('\\')[0])||0;
+    else if(group===0x0028 && elem===0x1053) slope=parseFloat(txt(vp,len))||1;
+    else if(group===0x0028 && elem===0x1052) inter=parseFloat(txt(vp,len))||0;
+    if(group===0x0002) metaCount++;
+    pos=vp+len;
+  }
+  if(!rows||!cols) throw new Error('не найдены размеры изображения');
+  const slicePx=rows*cols, bpp=bits/8, nFrames=Math.max(1,frames);
+  const mode = transfer==='1.2.840.10008.1.2.5' ? 'rle'
+    : (transfer==='1.2.840.10008.1.2.4.50'||transfer==='1.2.840.10008.1.2.4.51') ? 'jpeg'
+    : (fragments? 'other':'raw');
+  const frameVals=[];
+  if(mode==='raw'){
+    if(uncPixOff<0) throw new Error('PixelData не найдены');
+    if(bits!==8 && bits!==16) throw new Error('DICOM '+bits+' бит не поддерживается (8/16)');
+    const readPx=o=> bits<=8? dv.getUint8(o) : (pixRep? dv.getInt16(o,le):dv.getUint16(o,le));
+    for(let fr=0;fr<nFrames;fr++){ const a=new Float64Array(slicePx); for(let i=0;i<slicePx;i++) a[i]=readPx(uncPixOff+(fr*slicePx+i)*bpp)*slope+inter; frameVals.push(a); }
+  } else if(mode==='rle'){
+    if(!fragments||!fragments.length) throw new Error('RLE: фрагменты не найдены');
+    for(let fr=0;fr<nFrames;fr++){ const fi=Math.min(fr,fragments.length-1);
+      const fb=new Uint8Array(buffer, fragments[fi].o, fragments[fi].L);
+      const vals=dicomRLE(fb, slicePx, bits, pixRep);
+      for(let i=0;i<slicePx;i++) vals[i]=vals[i]*slope+inter; frameVals.push(vals); }
+  } else if(mode==='jpeg'){
+    if(!fragments||!fragments.length) throw new Error('JPEG: фрагменты не найдены');
+    for(let fr=0;fr<nFrames;fr++){ const fi=Math.min(fr,fragments.length-1);
+      const fb=new Uint8Array(buffer, fragments[fi].o, fragments[fi].L);
+      const g=await jpegBytesToGray(fb); cols=g.w; rows=g.h;
+      frameVals.push(Float64Array.from(g.gray)); }
+  } else {
+    throw new Error('сжатие DICOM '+transfer+' (JPEG-Lossless / JPEG-LS / JPEG2000) браузер не декодирует — экспортируйте несжатым/RLE или конвертируйте (dcmtk: dcmdjpeg, gdcm).');
+  }
+  const px=rows*cols;
+  let mn=Infinity,mx=-Infinity; for(const a of frameVals) for(let i=0;i<a.length;i++){ if(a[i]<mn)mn=a[i]; if(a[i]>mx)mx=a[i]; }
+  const rng=(mx>mn)?(mx-mn):1;
+  const pages=frameVals.map(a=>{ const gray=new Float32Array(px); for(let i=0;i<px;i++){ let v=(a[i]-mn)/rng*255; if(/MONOCHROME1/.test(photo)) v=255-v; gray[i]=v; } return {w:cols,h:rows,gray}; });
+  return { pages, voxel:spacing };
+}
+
+function refreshSlices(){
+  const box = $('slices'); box.innerHTML='';
+  const show = state.slices.slice(0,8);
+  show.forEach(s=>{
+    const t=document.createElement('div'); t.className='thumb';
+    if(s.displayURL){ const im=document.createElement('img'); im.src=s.displayURL; im.style.width='100%'; im.style.height='100%'; im.style.objectFit='cover'; t.appendChild(im); }
+    box.appendChild(t);
+  });
+  if(state.slices.length>8){
+    const m=document.createElement('div'); m.className='more'; m.textContent='+'+(state.slices.length-8);
+    box.appendChild(m);
+  }
+  const n=state.slices.length;
+  if(n && !/Стек:|Загрузка стека/.test($('sliceInfo').textContent||''))
+    $('sliceInfo').textContent = `Загружено срезов: ${n} · разрешение обработки ${state.slices[0].w}×${state.slices[0].h}`;
+  else if(!n) $('sliceInfo').textContent='';
+  $('run').disabled = n===0;
+}
+
+function clearAll(){
+  state.slices=[]; state.stackStep=1; refreshSlices();
+  $('results').classList.remove('on'); $('placeholder').style.display='';
+}
+
+// ---------- DEMO sample generator (procedural porous cross-section) ----------
+function generateDemo(){
+  const W=560, H=520;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  const img=ctx.createImageData(W,H); const dt=img.data;
+  const cx=W/2, cy=H/2, rx=W*0.40, ry=H*0.40;
+  const rnd=()=> (Math.random()-.5);
+  // base fill: dark background + crumb inside ellipse + brighter crust ring
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const nx=(x-cx)/rx, ny=(y-cy)/ry; const r=Math.hypot(nx,ny);
+    let g;
+    if(r>1.0){ g = 10 + 6*Math.random(); }          // background (air outside)
+    else {
+      const crumb = 96 + 14*rnd();
+      const crust = 158 + 16*rnd();
+      // crust ring near boundary
+      const t = Math.max(0, (r-0.80)/0.20);          // 0..1 toward edge
+      g = crumb*(1-t) + crust*t;
+    }
+    const i=(y*W+x)*4; dt[i]=dt[i+1]=dt[i+2]=Math.max(0,Math.min(255,g)); dt[i+3]=255;
+  }
+  // pores: power-law sizes (many small, few big)
+  const nP=170;
+  for(let k=0;k<nP;k++){
+    const ang=Math.random()*6.283, rr=Math.sqrt(Math.random())*0.86;
+    const px=cx+Math.cos(ang)*rr*rx, py=cy+Math.sin(ang)*rr*ry;
+    const pr=3 + Math.pow(Math.random(),3)*24;       // skewed to small
+    for(let y=Math.floor(py-pr);y<=py+pr;y++)for(let x=Math.floor(px-pr);x<=px+pr;x++){
+      if(x<0||y<0||x>=W||y>=H)continue;
+      const dd=Math.hypot(x-px,y-py);
+      if(dd<=pr){
+        // keep pores inside object
+        const nx=(x-cx)/rx, ny=(y-cy)/ry; if(Math.hypot(nx,ny)>0.97)continue;
+        const i=(y*W+x)*4; const v=16+8*Math.random();
+        dt[i]=dt[i+1]=dt[i+2]=v;
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+  // mild blur to soften edges
+  ctx.globalAlpha=0.45; ctx.filter='blur(0.6px)'; ctx.drawImage(cv,0,0); ctx.filter='none'; ctx.globalAlpha=1;
+
+  const fake=new Image();
+  fake.onload=()=>{
+    state.slices=[]; addSlice(fake,'демо-образец (синтетика)'); refreshSlices();
+    // prefill plausible scale + mass so density panel works out of the box
+    if(!$('voxel').value) $('voxel').value='0.050';
+    if(!$('manVol').value) $('manVol').value='';
+    if(!$('mass').value) $('mass').value='';
+  };
+  fake.src=cv.toDataURL();
+}
+
+/* ============================================================
+                       ALGORITHMS
+   ============================================================ */
+
+function buildHistogram(gray, mask){
+  const h=new Float64Array(256); let n=0;
+  for(let i=0;i<gray.length;i++){
+    if(mask && !mask[i]) continue;
+    h[Math.max(0,Math.min(255,gray[i]|0))]++; n++;
+  }
+  return {h,n};
+}
+
+// Multi-Otsu: nClasses = 2 or 3 → returns array of thresholds
+function multiOtsu(hist, total, nClasses){
+  const L=256;
+  const P=new Float64Array(L+1), S=new Float64Array(L+1);
+  for(let i=0;i<L;i++){ const p=hist[i]/total; P[i+1]=P[i]+p; S[i+1]=S[i]+i*p; }
+  const w=(a,b)=>P[b]-P[a], s=(a,b)=>S[b]-S[a];
+  const mT=S[L];
+  if(nClasses===2){
+    let best=-1,t=128;
+    for(let a=1;a<L;a++){
+      const w0=w(0,a), w1=w(a,L); if(w0<=0||w1<=0)continue;
+      const m0=s(0,a)/w0, m1=s(a,L)/w1;
+      const bc=w0*(m0-mT)**2 + w1*(m1-mT)**2;
+      if(bc>best){best=bc;t=a;}
+    }
+    return [t];
+  }
+  // 3 classes
+  let best=-1,t1=85,t2=170;
+  for(let a=1;a<L-1;a++){
+    const w0=w(0,a); if(w0<=0)continue; const m0=s(0,a)/w0; const c0=w0*(m0-mT)**2;
+    for(let b=a+1;b<L;b++){
+      const w1=w(a,b), w2=w(b,L); if(w1<=0||w2<=0)continue;
+      const m1=s(a,b)/w1, m2=s(b,L)/w2;
+      const bc=c0 + w1*(m1-mT)**2 + w2*(m2-mT)**2;
+      if(bc>best){best=bc;t1=a;t2=b;}
+    }
+  }
+  return [t1,t2];
+}
+
+// Flood-fill background (non-material reachable from borders) — 4-connectivity
+function findBackground(material, w, h){
+  const bg=new Uint8Array(w*h);
+  const stack=new Int32Array(w*h); let sp=0;
+  const push=i=>{ if(!material[i]&&!bg[i]){bg[i]=1;stack[sp++]=i;} };
+  for(let x=0;x<w;x++){ push(x); push((h-1)*w+x); }
+  for(let y=0;y<h;y++){ push(y*w); push(y*w+w-1); }
+  while(sp>0){
+    const p=stack[--sp]; const x=p%w, y=(p/w)|0;
+    if(x>0)   push(p-1);
+    if(x<w-1) push(p+1);
+    if(y>0)   push(p-w);
+    if(y<h-1) push(p+w);
+  }
+  return bg;
+}
+
+// Connected components (8-conn) on binary mask → {labels, sizes[], comps[]}
+function connectedComponents(mask, w, h){
+  const labels=new Int32Array(w*h);
+  const sizes=[0]; const comps=[null];
+  const stack=new Int32Array(w*h);
+  let cur=0;
+  for(let i=0;i<w*h;i++){
+    if(mask[i] && labels[i]===0){
+      cur++; let size=0, sp=0; stack[sp++]=i; labels[i]=cur;
+      let minx=1e9,miny=1e9,maxx=-1,maxy=-1, perim=0;
+      while(sp>0){
+        const p=stack[--sp]; size++;
+        const x=p%w, y=(p/w)|0;
+        if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y;
+        // perimeter: count 4-neighbours that are outside the component
+        let edge=false;
+        const nb=[[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dx,dy] of nb){
+          const nx=x+dx, ny=y+dy;
+          if(nx<0||ny<0||nx>=w||ny>=h || !mask[ny*w+nx]){ edge=true; }
+        }
+        if(edge) perim++;
+        // 8-neighbours for growth
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          if(!dx&&!dy)continue;
+          const nx=x+dx, ny=y+dy;
+          if(nx<0||ny<0||nx>=w||ny>=h)continue;
+          const q=ny*w+nx;
+          if(mask[q]&&labels[q]===0){ labels[q]=cur; stack[sp++]=q; }
+        }
+      }
+      sizes.push(size);
+      comps.push({size, perim, bbox:[minx,miny,maxx,maxy]});
+    }
+  }
+  return {labels, sizes, comps};
+}
+
+// Squared 1-D EDT (Felzenszwalb & Huttenlocher)
+function edt1d(f, n, out){
+  const v=new Int32Array(n); const z=new Float64Array(n+1);
+  let k=0; v[0]=0; z[0]=-1e20; z[1]=1e20;
+  for(let q=1;q<n;q++){
+    let s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]);
+    while(s<=z[k]){ k--; s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]); }
+    k++; v[k]=q; z[k]=s; z[k+1]=1e20;
+  }
+  k=0;
+  for(let q=0;q<n;q++){
+    while(z[k+1]<q)k++;
+    out[q]=(q-v[k])*(q-v[k])+f[v[k]];
+  }
+}
+
+// 2-D Euclidean distance transform: distance of each "on" pixel to nearest "off"
+// onMask = 1 where we want distance (material); zeroSet = pixels with distance 0 (pores/bg)
+function edt2d(zeroSet, w, h){
+  const INF=1e20;
+  const g=new Float64Array(w*h);
+  for(let i=0;i<w*h;i++) g[i]= zeroSet[i] ? 0 : INF;
+  const col=new Float64Array(h), colOut=new Float64Array(h);
+  // columns
+  for(let x=0;x<w;x++){
+    for(let y=0;y<h;y++) col[y]=g[y*w+x];
+    edt1d(col,h,colOut);
+    for(let y=0;y<h;y++) g[y*w+x]=colOut[y];
+  }
+  const row=new Float64Array(w), rowOut=new Float64Array(w);
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++) row[x]=g[y*w+x];
+    edt1d(row,w,rowOut);
+    for(let x=0;x<w;x++) g[y*w+x]=Math.sqrt(rowOut[x]);
+  }
+  return g; // distance in pixels
+}
+
+// ----- 3D versions (для стека срезов: истинный объёмный анализ) -----
+// фон = не-материал, достижимый от любой из 6 граней объёма (6-связность)
+function findBackground3D(material, w, h, d){
+  const wh=w*h, N=wh*d; const bg=new Uint8Array(N);
+  const stack=new Int32Array(N); let sp=0;
+  const push=i=>{ if(!material[i]&&!bg[i]){ bg[i]=1; stack[sp++]=i; } };
+  for(let z=0;z<d;z++)for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(x===0||y===0||z===0||x===w-1||y===h-1||z===d-1) push((z*h+y)*w+x);
+  }
+  while(sp>0){ const p=stack[--sp]; const x=p%w, y=((p/w)|0)%h, z=(p/wh)|0;
+    if(x>0)push(p-1); if(x<w-1)push(p+1);
+    if(y>0)push(p-w); if(y<h-1)push(p+w);
+    if(z>0)push(p-wh); if(z<d-1)push(p+wh);
+  }
+  return bg;
+}
+// связные компоненты пор в объёме (26-связность) → размеры в вокселях
+function connectedComponents3D(mask, w, h, d){
+  const wh=w*h, N=wh*d; const labels=new Int32Array(N); const sizes=[0];
+  const stack=new Int32Array(N); let cur=0;
+  for(let i=0;i<N;i++){
+    if(mask[i] && labels[i]===0){
+      cur++; let size=0, sp=0; stack[sp++]=i; labels[i]=cur;
+      while(sp>0){ const p=stack[--sp]; size++;
+        const x=p%w, y=((p/w)|0)%h, z=(p/wh)|0;
+        for(let dz=-1;dz<=1;dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          if(!dx&&!dy&&!dz)continue;
+          const nx=x+dx, ny=y+dy, nz=z+dz;
+          if(nx<0||ny<0||nz<0||nx>=w||ny>=h||nz>=d)continue;
+          const q=(nz*h+ny)*w+nx;
+          if(mask[q]&&labels[q]===0){ labels[q]=cur; stack[sp++]=q; }
+        }
+      }
+      sizes.push(size);
+    }
+  }
+  return {labels, sizes};
+}
+// 3D евклидова карта расстояний (разделимая по осям, изотропная — в вокселях)
+function edt3D(zeroSet, w, h, d){
+  const wh=w*h, N=wh*d, INF=1e20; const g=new Float64Array(N);
+  for(let i=0;i<N;i++) g[i]= zeroSet[i]?0:INF;
+  const bx=new Float64Array(w), ox=new Float64Array(w);          // X (накапливает квадрат расстояния)
+  for(let z=0;z<d;z++)for(let y=0;y<h;y++){ const base=(z*h+y)*w;
+    for(let x=0;x<w;x++) bx[x]=g[base+x]; edt1d(bx,w,ox); for(let x=0;x<w;x++) g[base+x]=ox[x]; }
+  const by=new Float64Array(h), oy=new Float64Array(h);          // Y
+  for(let z=0;z<d;z++)for(let x=0;x<w;x++){ for(let y=0;y<h;y++) by[y]=g[(z*h+y)*w+x]; edt1d(by,h,oy); for(let y=0;y<h;y++) g[(z*h+y)*w+x]=oy[y]; }
+  const bz=new Float64Array(d), oz=new Float64Array(d);          // Z (финальный sqrt)
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ for(let z=0;z<d;z++) bz[z]=g[(z*h+y)*w+x]; edt1d(bz,d,oz); for(let z=0;z<d;z++) g[(z*h+y)*w+x]=Math.sqrt(oz[z]); }
+  return g;
+}
+// линейная аппроксимация y=a·x+b по точкам [[x,y],...] + R²
+function linFit(pts){
+  const n=pts.length; if(n<2) return null;
+  let sx=0,sy=0,sxx=0,sxy=0; for(const [x,y] of pts){ sx+=x;sy+=y;sxx+=x*x;sxy+=x*y; }
+  const den=n*sxx-sx*sx; if(Math.abs(den)<1e-9) return null;
+  const a=(n*sxy-sx*sy)/den, b=(sy-a*sx)/n;
+  let ssTot=0,ssRes=0; const my=sy/n;
+  for(const [x,y] of pts){ const f=a*x+b; ssRes+=(y-f)*(y-f); ssTot+=(y-my)*(y-my); }
+  const r2= ssTot>0? 1-ssRes/ssTot : 1;
+  return {a,b,r2};
+}
+
+// ---- watershed-разделение слипшихся пор (2D и 3D) ----
+// pore: маска пор; dist: EDT внутри пор (расстояние до не-поры). Возвращает {label,K,sizes}.
+function watershedSplit(pore, dist, W, H, D){
+  const wh=W*H, N=wh*D, is3D=D>1;
+  const NB=[]; for(let dz=(is3D?-1:0);dz<=(is3D?1:0);dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ if(dx||dy||dz) NB.push([dx,dy,dz]); }
+  const isMax=new Uint8Array(N);
+  for(let z=0;z<D;z++)for(let y=0;y<H;y++)for(let x=0;x<W;x++){ const i=(z*H+y)*W+x; if(!pore[i]||dist[i]<2)continue; let mx=true;
+    for(let k=0;k<NB.length;k++){ const nx=x+NB[k][0],ny=y+NB[k][1],nz=z+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; if(dist[(nz*H+ny)*W+nx]>dist[i]){mx=false;break;} }
+    if(mx) isMax[i]=1; }
+  // плато-максимумы → маркеры
+  const marker=new Int32Array(N), stack=new Int32Array(N); let nM=0; const mRad=[0], mRep=[0];
+  for(let i=0;i<N;i++){ if(isMax[i]&&!marker[i]){ nM++; let sp=0; stack[sp++]=i; marker[i]=nM; let r=dist[i], rep=i;
+    while(sp>0){ const p=stack[--sp]; if(dist[p]>r){r=dist[p];rep=p;} const px=p%W,py=((p/W)|0)%H,pz=(p/wh)|0;
+      for(let k=0;k<NB.length;k++){ const nx=px+NB[k][0],ny=py+NB[k][1],nz=pz+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; const q=(nz*H+ny)*W+nx; if(isMax[q]&&!marker[q]){marker[q]=nM;stack[sp++]=q;} } }
+    mRad.push(r); mRep.push(rep); } }
+  // подавление близких маркеров (жадно по радиусу): убрать пик внутри радиуса большего
+  const order=[]; for(let m=1;m<=nM;m++) order.push(m); order.sort((a,b)=>mRad[b]-mRad[a]);
+  const keep=new Uint8Array(nM+1); const kept=[];
+  for(const m of order){ const rp=mRep[m], x=rp%W,y=((rp/W)|0)%H,z=(rp/wh)|0; let ok=true;
+    for(let j=0;j<kept.length;j++){ const r2=mRep[kept[j]], kx=r2%W,ky=((r2/W)|0)%H,kz=(r2/wh)|0; if(Math.sqrt((x-kx)**2+(y-ky)**2+(z-kz)**2)<mRad[kept[j]]){ok=false;break;} }
+    if(ok){keep[m]=1;kept.push(m);} }
+  const remap=new Int32Array(nM+1); let K=0; for(const m of kept) remap[m]=++K;
+  const label=new Int32Array(N);
+  let bmax=1; for(let i=0;i<N;i++) if(pore[i]&&dist[i]>bmax) bmax=dist[i]; bmax=Math.ceil(bmax);
+  const buckets=Array.from({length:bmax+1},()=>[]);
+  const pushNb=(i,cap)=>{ const x=i%W,y=((i/W)|0)%H,z=(i/wh)|0; for(let k=0;k<NB.length;k++){ const nx=x+NB[k][0],ny=y+NB[k][1],nz=z+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; const q=(nz*H+ny)*W+nx; if(pore[q]&&!label[q]) buckets[Math.min(cap,Math.floor(dist[q]))].push(q); } };
+  for(let i=0;i<N;i++){ if(marker[i]&&keep[marker[i]]) label[i]=remap[marker[i]]; }
+  for(let i=0;i<N;i++){ if(label[i]) pushNb(i,bmax); }
+  for(let b=bmax;b>=0;b--){ const bk=buckets[b]; for(let t=0;t<bk.length;t++){ const i=bk[t]; if(label[i])continue;
+    const x=i%W,y=((i/W)|0)%H,z=(i/wh)|0; let lab=0;
+    for(let k=0;k<NB.length;k++){ const nx=x+NB[k][0],ny=y+NB[k][1],nz=z+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; const q=(nz*H+ny)*W+nx; if(label[q]>0){lab=label[q];break;} }
+    if(lab>0){ label[i]=lab; pushNb(i,b); } } }
+  // остаток (поры без маркера) → собственные метки
+  for(let i=0;i<N;i++){ if(pore[i]&&!label[i]){ K++; let sp=0; stack[sp++]=i; label[i]=K; while(sp>0){ const p=stack[--sp]; const px=p%W,py=((p/W)|0)%H,pz=(p/wh)|0; for(let k=0;k<NB.length;k++){ const nx=px+NB[k][0],ny=py+NB[k][1],nz=pz+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; const q=(nz*H+ny)*W+nx; if(pore[q]&&!label[q]){label[q]=K;stack[sp++]=q;} } } } }
+  const sizes=new Array(K+1).fill(0); for(let i=0;i<N;i++) if(label[i]) sizes[label[i]]++;
+  return {label, K, sizes};
+}
+
+// ---- строгая локальная толщина (Хильдебранд): диаметр макс. вписанного шара (2D/3D) ----
+// material: маска материала; dist: EDT материала. Возвращает карту толщин (в вокселях, =2r).
+function localThickness(material, dist, W, H, D){
+  const wh=W*H, N=wh*D, is3D=D>1;
+  const NB=[]; for(let dz=(is3D?-1:0);dz<=(is3D?1:0);dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ if(dx||dy||dz) NB.push([dx,dy,dz]); }
+  const ridge=[];
+  for(let z=0;z<D;z++)for(let y=0;y<H;y++)for(let x=0;x<W;x++){ const i=(z*H+y)*W+x; if(!material[i]||dist[i]<0.7)continue; let mx=true;
+    for(let k=0;k<NB.length;k++){ const nx=x+NB[k][0],ny=y+NB[k][1],nz=z+NB[k][2]; if(nx<0||ny<0||nz<0||nx>=W||ny>=H||nz>=D)continue; if(dist[(nz*H+ny)*W+nx]>dist[i]){mx=false;break;} }
+    if(mx) ridge.push(i); }
+  ridge.sort((a,b)=>dist[b]-dist[a]);
+  const th=new Float32Array(N);
+  for(const c of ridge){ const r=dist[c], two=2*r; if(th[c]>=two) continue;
+    const cx=c%W, cy=((c/W)|0)%H, cz=(c/wh)|0, R=Math.ceil(r), r2=r*r;
+    const z0=is3D?Math.max(0,cz-R):cz, z1=is3D?Math.min(D-1,cz+R):cz;
+    for(let z=z0;z<=z1;z++){ const ddz=is3D?(z-cz)*(z-cz):0;
+      for(let y=Math.max(0,cy-R);y<=Math.min(H-1,cy+R);y++){ const ddy=(y-cy)*(y-cy), rowo=(z*H+y)*W;
+        for(let x=Math.max(0,cx-R);x<=Math.min(W-1,cx+R);x++){ if((x-cx)*(x-cx)+ddy+ddz>r2)continue; const i=rowo+x; if(th[i]<two) th[i]=two; } } } }
+  return th;
+}
+
+/* ============================================================
+                       PIPELINE
+   ============================================================ */
+
+// псевдоцветовые палитры (LUT) для исходного среза
+const PALETTES={
+  viridis:[[68,1,84],[59,82,139],[33,144,141],[93,201,99],[253,231,37]],
+  inferno:[[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],
+  hot:[[0,0,0],[140,0,0],[255,60,0],[255,230,40],[255,255,255]],
+  jet:[[0,0,131],[0,128,255],[40,255,128],[255,255,0],[230,0,0]]
+};
+function paletteColor(name,t){ const st=PALETTES[name]; if(!st)return null; const x=Math.max(0,Math.min(1,t))*(st.length-1), i=Math.floor(x), f=x-i, a=st[i], b=st[Math.min(st.length-1,i+1)]; return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]; }
+let lutPalette='inferno';
+function drawPseudocolor(r){
+  const p=r.primary; if(!p) return; const {w,h,gray}=p;
+  const c=$('lutCanvas'); c.width=w; c.height=h; c.style.height='auto';
+  const ctx=c.getContext('2d'); const im=ctx.createImageData(w,h);
+  const pal=PALETTES[lutPalette];
+  for(let i=0,j=0;i<w*h;i++,j+=4){ const g=gray[i];
+    if(pal){ const col=paletteColor(lutPalette,g/255); im.data[j]=col[0]|0; im.data[j+1]=col[1]|0; im.data[j+2]=col[2]|0; }
+    else { im.data[j]=im.data[j+1]=im.data[j+2]=g; }
+    im.data[j+3]=255; }
+  ctx.putImageData(im,0,0);
+  drawColorbar();
+}
+function drawColorbar(){
+  const bar=$('lutBar'); const W=bar.clientWidth||300, H=16, dpr=Math.min(2,window.devicePixelRatio||1);
+  bar.width=W*dpr; bar.height=H*dpr; const ctx=bar.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pal=PALETTES[lutPalette];
+  for(let x=0;x<W;x++){ const t=x/(W-1||1); const col= pal? paletteColor(lutPalette,t):[t*255,t*255,t*255];
+    ctx.fillStyle='rgb('+(col[0]|0)+','+(col[1]|0)+','+(col[2]|0)+')'; ctx.fillRect(x,0,1,H); }
+}
+function applyLut(gray,lut){ const g=new Float32Array(gray.length); for(let i=0;i<gray.length;i++) g[i]=lut[gray[i]|0]; return g; }
+
+let lastReport=null;
+let manualThr=null;   // [t1] или [t1,t2] когда оператор задаёт порог вручную
+const MAX3D=24000000; // лимит вокселей для 3D-режима (память)
+
+async function runAnalysis(){
+  if(!state.slices.length) return;
+  $('run').disabled=true; $('prog').classList.add('on');
+  const stages=['Подготовка','Сегментация','Выделение пор','3D-анализ','Морфометрия','Готово'];
+  const setStage=(i)=>{ $('pbarFill').style.width=Math.round((i+1)/stages.length*100)+'%'; $('pstage').textContent=stages[i]; };
+  const tick=ms=>new Promise(r=>setTimeout(r,ms));
+
+  // изображение обрабатывается в уменьшенном виде (≤MAXDIM); воксель задаётся для ОРИГИНАЛА,
+  // поэтому эффективный воксель на пиксель обработки = заданный × коэффициент уменьшения (dsf)
+  const dsf = (state.slices[0] && state.slices[0].downscale) || 1;
+  let voxelDisplay = parseFloat($('voxel').value)||0;        // мм на ОРИГИНАЛЬНЫЙ пиксель (ввод/лог)
+  let voxel = voxelDisplay>0 ? voxelDisplay*dsf : 0;          // ЭФФЕКТИВНЫЙ мм на пиксель обработки
+  const sliceTh = (parseFloat($('sliceTh').value)||0) * (state.stackStep||1); // ×прореживание стека
+  const sliceThInput = parseFloat($('sliceTh').value)||0;
+  const mass = parseFloat($('mass').value)||0;       // g
+  const manVol = parseFloat($('manVol').value)||0;   // cm3
+  const nClasses = parseInt($('nclass').value,10);
+  const optCrop = $('optCrop').checked;
+
+  // ---- авто-обрезка до объекта: bbox по среднему срезу, контраст растягивается внутри ----
+  let slices = state.slices, cropBox = null;
+  if(optCrop && state.slices.length){
+    const mid=state.slices[Math.floor(state.slices.length/2)];
+    const box=findObjectBBox(mid.gray, mid.w, mid.h);
+    // обрезаем ТОЛЬКО если объект уверенно мал и компактен (обе стороны < 60% кадра) —
+    // иначе (объект во весь кадр или сложная форма) оставляем как есть, чтобы не испортить
+    if(box && (box[2]-box[0]+1) < mid.w*0.6 && (box[3]-box[1]+1) < mid.h*0.6){
+      cropBox=box;
+      slices = state.slices.map(s=>{ const c=cropSlice(s.gray,s.w,s.h,box); return {w:c.w,h:c.h,gray:c.gray,name:s.name}; });
+    }
+  }
+
+  const knownW = parseFloat($('knownW').value)||0;
+  if(voxel<=0 && knownW>0){
+    const wpx=measureObjectWidthPx(slices[0], nClasses);   // ширина в пикселях обработки
+    if(wpx>0){ voxel=knownW/wpx; voxelDisplay=voxel/dsf; $('voxel').value=voxelDisplay.toFixed(4);
+      $('autoNote').innerHTML='Авто-масштаб: ширина ≈ '+wpx+' px → воксель <b>'+voxelDisplay.toFixed(4)+' мм/px</b>'; }
+  }
+  const hasScale = voxel>0;
+  const nSlices = slices.length, is3D = nSlices>1;
+  const unitArea = hasScale ? 'мм²':'px²', unitLen = hasScale ? 'мм':'px';
+
+  // калибровка плотности: точки (яркость, плотность) из полей
+  const calPts=[];
+  [['calB1','calD1'],['calB2','calD2'],['calB3','calD3']].forEach(([b,d])=>{
+    const bv=parseFloat($(b).value), dv=parseFloat($(d).value);
+    if(!isNaN(bv)&&!isNaN(dv)) calPts.push([bv,dv]);
+  });
+  const cal = calPts.length>=2 ? linFit(calPts) : null;
+  const optWatershed = $('optWatershed').checked, optLocalTh = $('optLocalTh').checked;
+  const LT3D_CAP = 8000000;
+  let wallLocal = optLocalTh;   // станет false, если в 3D пришлось откатиться на 2×EDT
+
+  const optPercentile = $('optPercentile').checked;
+  const optROI = $('optROI').checked, roiPct = parseInt($('roiPct').value,10)||90;
+
+  setStage(0); await tick(120);
+
+  // ---- объединённая гистограмма (для Оцу и перцентильной нормализации) ----
+  const hg0=new Float64Array(256); let nTot=0;
+  for(const s of slices){ const hg=buildHistogram(s.gray,null); for(let i=0;i<256;i++) hg0[i]+=hg.h[i]; nTot+=hg.n; }
+  // перцентильная нормализация 1–99% → LUT
+  let lut=null;
+  if(optPercentile && nTot>0){
+    let c=0,p1=0,p99=255,set1=false; const lo=nTot*0.01, hi=nTot*0.99;
+    for(let v=0;v<256;v++){ c+=hg0[v]; if(!set1&&c>=lo){p1=v;set1=true;} if(c>=hi){p99=v;break;} }
+    if(p99<=p1) p99=p1+1;
+    lut=new Uint8Array(256); for(let v=0;v<256;v++) lut[v]=Math.max(0,Math.min(255,Math.round((v-p1)/(p99-p1)*255)));
+  }
+  const hgT = lut ? (()=>{ const a=new Float64Array(256); for(let v=0;v<256;v++) a[lut[v]]+=hg0[v]; return a; })() : hg0;
+  // ---- глобальные пороги: ручные или Оцу ----
+  let thr = manualThr ? (nClasses===3 ? manualThr.slice(0,2) : manualThr.slice(0,1)) : multiOtsu(hgT,nTot,nClasses);
+  const usedManual=!!manualThr;
+  if(nClasses===2 && thr.length<2) thr=[thr[0], 256];
+
+  // ---- 3D-доступность ----
+  const d0={w:slices[0].w, h:slices[0].h};
+  const sameDims = slices.every(s=>s.w===d0.w && s.h===d0.h);
+  const can3D = is3D && sameDims && (d0.w*d0.h*nSlices)<=MAX3D;
+  const clsVol = can3D ? new Uint8Array(d0.w*d0.h*nSlices) : null;
+
+  let totObjPx=0,totPorePx=0,totMatPx=0,totDensePx=0;
+  let sumObjGray=0,sumMatGray=0,sumAirGray=0,sumDenseGray=0;
+  const histAll=new Float64Array(256);
+  let poreD=[];      // диаметры пор уже в финальных единицах (mm или px/voxel)
+  let walls=[];      // толщины стенок в финальных единицах
+  let primary=null, profile=null, bbox=[1e9,1e9,-1,-1];
+
+  setStage(1);
+  for(let si=0; si<nSlices; si++){
+    const w=slices[si].w, h=slices[si].h;
+    const gray = lut ? applyLut(slices[si].gray, lut) : slices[si].gray;
+    const material=new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++) material[i]= gray[i]>thr[0]?1:0;
+    const bg=findBackground(material,w,h);
+    // ROI: центральная круглая область
+    const rcx=w/2, rcy=h/2, rr=optROI? (roiPct/100)*Math.min(w,h)/2 : 0, rr2=rr*rr;
+    const cls=new Uint8Array(w*h), poreMask=new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++){
+      if(optROI){ const x=i%w, y=(i/w)|0; if((x-rcx)*(x-rcx)+(y-rcy)*(y-rcy)>rr2){ cls[i]=0; continue; } }
+      if(bg[i]){ cls[i]=0; continue; }
+      const g=gray[i];
+      if(g<=thr[0]){ cls[i]=1; poreMask[i]=1; }
+      else if(nClasses===3 && g>thr[1]) cls[i]=3;
+      else cls[i]=2;
+    }
+    for(let i=0;i<w*h;i++){ const c=cls[i]; if(c===0)continue;
+      totObjPx++; sumObjGray+=gray[i];
+      if(c===1){ totPorePx++; sumAirGray+=gray[i]; }
+      else { totMatPx++; sumMatGray+=gray[i]; if(c===3){ totDensePx++; sumDenseGray+=gray[i]; } }
+      histAll[Math.max(0,Math.min(255,gray[i]|0))]++;
+    }
+    if(clsVol) clsVol.set(cls, si*w*h);
+    if(!can3D){   // 2D-анализ пор/стенок (одиночный срез или большой стек)
+      let sizes;
+      if(optWatershed){ const pz=new Uint8Array(w*h); for(let i=0;i<w*h;i++) pz[i]=poreMask[i]?0:1;
+        sizes=watershedSplit(poreMask, edt2d(pz,w,h), w,h,1).sizes; }
+      else { const cc=connectedComponents(poreMask,w,h); sizes=cc.comps.map(c=>c?c.size:0); }
+      for(let s=1;s<sizes.length;s++){ const a=sizes[s]; if(a<3)continue; const dpx=2*Math.sqrt(a/Math.PI); poreD.push(hasScale? dpx*voxel : dpx); }
+      const matMask=new Uint8Array(w*h), mz=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++){ const m=(cls[i]===2||cls[i]===3)?1:0; matMask[i]=m; mz[i]=m?0:1; }
+      const md=edt2d(mz,w,h);
+      if(optLocalTh){ const lt=localThickness(matMask,md,w,h,1); for(let i=0;i<w*h;i++){ if(matMask[i]&&lt[i]>0){ walls.push(hasScale? lt[i]*voxel:lt[i]); } } }
+      else { for(let i=0;i<w*h;i++){ if(matMask[i]&&md[i]>0.5){ const t=2*md[i]; walls.push(hasScale? t*voxel:t); } } }
+    }
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){ if(cls[y*w+x]!==0){ if(x<bbox[0])bbox[0]=x; if(y<bbox[1])bbox[1]=y; if(x>bbox[2])bbox[2]=x; if(y>bbox[3])bbox[3]=y; } }
+    if(si===0){
+      const cc0=connectedComponents(poreMask,w,h);   // для формы пор на срезе
+      primary={w,h,gray,cls,thr,nClasses,comps:cc0.comps};
+      const rows=Math.min(60,h); const prof=[];
+      for(let r=0;r<rows;r++){ const y0=Math.floor(r/rows*h), y1=Math.floor((r+1)/rows*h); let mat=0,obj=0,sum=0;
+        for(let y=y0;y<y1;y++)for(let x=0;x<w;x++){ const c=cls[y*w+x]; if(c===0)continue; obj++; sum+=gray[y*w+x]; if(c===2||c===3)mat++; }
+        prof.push({frac:obj?mat/obj:0, bright:obj?sum/obj:0}); }
+      profile=prof;
+    }
+    if(si%4===0) await tick(0);
+  }
+
+  // ---- истинный 3D-анализ пор (26-связность) ----
+  let pore3D=false;
+  if(can3D){
+    setStage(2); await tick(80);
+    const W=d0.w,H=d0.h,D=nSlices,N=W*H*D;
+    const mat3=new Uint8Array(N), pore3=new Uint8Array(N);
+    for(let i=0;i<N;i++){ const c=clsVol[i]; if(c===2||c===3)mat3[i]=1; else if(c===1)pore3[i]=1; }
+    setStage(3); await tick(80);
+    let sizes;
+    if(optWatershed){ const pz=new Uint8Array(N); for(let i=0;i<N;i++) pz[i]=pore3[i]?0:1;
+      sizes=watershedSplit(pore3, edt3D(pz,W,H,D), W,H,D).sizes; }
+    else sizes=connectedComponents3D(pore3,W,H,D).sizes;
+    const voxVolMM = hasScale ? voxel*voxel*(sliceTh>0?sliceTh:voxel) : 1;
+    for(let s=1;s<sizes.length;s++){ const v=sizes[s]; if(v<2)continue;
+      poreD.push(hasScale ? 2*Math.cbrt(3*(v*voxVolMM)/(4*Math.PI)) : 2*Math.cbrt(3*v/(4*Math.PI))); }
+    setStage(4); await tick(80);
+    const mz=new Uint8Array(N); for(let i=0;i<N;i++) mz[i]= mat3[i]?0:1;
+    const md=edt3D(mz,W,H,D);
+    if(optLocalTh && N<=LT3D_CAP){ const lt=localThickness(mat3,md,W,H,D);
+      for(let i=0;i<N;i++){ if(mat3[i] && lt[i]>0 && (i&3)===0){ walls.push(hasScale? lt[i]*voxel:lt[i]); } } }
+    else { if(optLocalTh) wallLocal=false;   // стек крупный → быстрое приближение 2×EDT
+      for(let i=0;i<N;i++){ if(mat3[i] && md[i]>0.5 && (i&3)===0){ const t=2*md[i]; walls.push(hasScale? t*voxel:t); } } }
+    pore3D=true;
+  }
+
+  setStage(5); await tick(120);
+
+  // ---- агрегированные метрики ----
+  const porosity = totObjPx>0 ? totPorePx/totObjPx : 0;
+  const denseFrac = totMatPx>0 ? totDensePx/totMatPx : 0;
+  const pxArea = hasScale ? voxel*voxel : 1;
+  const bw=(bbox[2]-bbox[0]+1), bh=(bbox[3]-bbox[1]+1);
+  const dimX = hasScale ? bw*voxel : bw, dimY = hasScale ? bh*voxel : bh;
+  const objArea = totObjPx*pxArea, poreArea = totPorePx*pxArea;
+  // ---- контроль достоверности изоляции изделия ----
+  // если «объект» заполняет почти весь кадр или порог вырожден — изделие не выделено от фона
+  const frameVox = nSlices * d0.w * d0.h;
+  const objFrac = frameVox>0 ? totObjPx/frameVox : 0;
+  const bboxFrac = (bw*bh)/(d0.w*d0.h);
+  const lowThr = thr[0]<=2;
+  const unreliable = !cropBox && (objFrac>0.7 || bboxFrac>0.85 || lowThr);
+
+  let volTotal=null, volPore=null, volUnit='см³';
+  if(is3D && hasScale && sliceTh>0){ const voxVol=voxel*voxel*sliceTh; volTotal=totObjPx*voxVol/1000; volPore=totPorePx*voxVol/1000; }
+  else if(manVol>0){ volTotal=manVol; volPore=manVol*porosity; }
+
+  poreD.sort((a,b)=>a-b);
+  const meanD = poreD.length? poreD.reduce((a,b)=>a+b,0)/poreD.length : 0;
+  const medD  = poreD.length? poreD[Math.floor(poreD.length/2)] : 0;
+  const maxD  = poreD.length? poreD[poreD.length-1] : 0;
+  const nPores= poreD.length;
+
+  let circs=[];
+  if(primary) for(const c of primary.comps){ if(!c||c.size<8||!c.perim)continue; circs.push(Math.min(1,4*Math.PI*c.size/(c.perim*c.perim))); }
+  const meanCirc = circs.length? circs.reduce((a,b)=>a+b,0)/circs.length : 0;
+
+  walls.sort((a,b)=>a-b);
+  const wallMean = walls.length? walls.reduce((a,b)=>a+b,0)/walls.length : 0;
+  const wallMed  = walls.length? walls[Math.floor(walls.length/2)] : 0;
+
+  let appDensity=null, trueDensity=null;
+  if(mass>0 && volTotal>0){ appDensity=mass/volTotal; trueDensity= porosity<0.999? appDensity/(1-porosity):null; }
+
+  const meanMatBright = totMatPx? sumMatGray/totMatPx : 0;
+  const clsBright = { air: totPorePx?sumAirGray/totPorePx:0, mat: totMatPx?sumMatGray/totMatPx:0, dense: totDensePx?sumDenseGray/totDensePx:0 };
+
+  // калиброванная плотность (яркость → г/см³)
+  let calMatDensity=null, calBulkDensity=null, calR2=null, calLine=null;
+  if(cal){
+    const mg = totMatPx? sumMatGray/totMatPx : 0, og = totObjPx? sumObjGray/totObjPx : 0;
+    calMatDensity = Math.max(0, cal.a*mg + cal.b);
+    calBulkDensity = Math.max(0, cal.a*og + cal.b);
+    calR2 = cal.r2; calLine = {a:cal.a, b:cal.b};
+  }
+
+  const report = {
+    meta:{ nSlices, is3D, hasScale, voxel:voxelDisplay, sliceTh, nClasses, thr, usedManual, pore3D, can3D, poreSep:(optWatershed?'watershed':'ccl'), wallMethod:(wallLocal?'local':'edt'), percentile:optPercentile, roi:(optROI?roiPct:0), cropped:!!cropBox, unreliable, objFrac:+objFrac.toFixed(3), lowThr },
+    porosity, denseFrac, dimX, dimY, unitLen,
+    objArea, poreArea, unitArea, volTotal, volPore, volUnit,
+    nPores, meanD, medD, maxD, meanCirc,
+    wallMean, wallMed, appDensity, trueDensity, mass, meanMatBright,
+    calMatDensity, calBulkDensity, calR2, calLine, clsBright,
+    diams:poreD, walls, profile, primary, histAll, lut, roiParams:(optROI?{pct:roiPct}:null), cropBox
+  };
+  lastReport=report;
+
+  $('prog').classList.remove('on'); $('pbarFill').style.width='0';
+  renderReport(report);
+  $('run').disabled=false;
+}
+
+/* ============================================================
+                       RENDERING
+   ============================================================ */
+
+const fmt=(x,d=2)=> x==null||isNaN(x)? '—' : Number(x).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=(x)=> x==null||isNaN(x)? '—' : (x*100).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1});
+
+function renderReport(r){
+  if(typeof hideTip==='function') hideTip();
+  $('placeholder').style.display='none';
+  $('results').classList.add('on');
+
+  // sync threshold sliders to thresholds used
+  const t=r.meta.thr;
+  $('thrT1').value=t[0]; $('thrT1v').textContent=t[0];
+  if(r.meta.nClasses===3){ $('thrT2cell').style.display=''; $('thrT2').value=t[1]||128; $('thrT2v').textContent=t[1]||128; }
+  else $('thrT2cell').style.display='none';
+  $('thrMode').textContent = r.meta.usedManual ? 'режим: ручной' : 'режим: авто (Оцу)';
+
+  // status banner
+  const sb=$('statusBanner');
+  const poreMode = (r.meta.pore3D ? 'поры — 3D (26-связность)' : (r.meta.is3D ? 'поры — 2D по срезам' : 'поры — 2D')) + (r.meta.cropped ? '; авто-обрезка до объекта ✓' : '');
+  if(r.meta.is3D && r.meta.hasScale && r.meta.sliceTh>0){
+    sb.className='status-banner ok';
+    sb.innerHTML='<span class="bic">✓</span><div>Объёмный расчёт по стеку из '+r.meta.nSlices+' срезов, воксель '+fmt(r.meta.voxel,3)+' мм. Объёмы и пористость трёхмерные; '+poreMode+'.'+(r.meta.is3D&&!r.meta.can3D?' <b>Стек крупный — 3D-анализ пор пропущен (память), считалось по срезам.</b>':'')+'</div>';
+  } else {
+    sb.className='status-banner note';
+    let why=[];
+    if(!r.meta.is3D) why.push('загружен один срез → метрики 2D (площадь сечения, площадная пористость)');
+    if(!r.meta.hasScale) why.push('не задан размер вокселя → длины в пикселях');
+    if(r.meta.is3D && !r.meta.sliceTh) why.push('не задан шаг срезов (объём не считается)');
+    sb.innerHTML='<span class="bic">ℹ</span><div><b>Режим:</b> '+why.join('; ')+'. '+poreMode+'.</div>';
+  }
+  // КОНТРОЛЬ ДОСТОВЕРНОСТИ: если изделие не выделилось от фона — числа НЕ доверять
+  if(r.meta.unreliable){
+    sb.className='status-banner warn';
+    sb.innerHTML='<span class="bic"><svg class="svgico" aria-hidden="true"><use href="#mic-warning"></use></svg></span><div><b>Изделие не выделено от фона — результатам нельзя доверять.</b> '
+      +(r.meta.lowThr?'Гистограмма вырождена (порог ≈0): кадр заполнен пустым полем реконструкции/чёрными углами. ':'«Объект» занял почти весь кадр ('+Math.round(r.meta.objFrac*100)+'%) — в него попало серое поле, а не только изделие. ')
+      +'Это типично для КТ, где небольшой образец лежит в большом поле с артефактами. Что делать: включить <b>авто-обрезку до объекта</b> или <b>ROI</b>, подвинуть <b>порог вручную</b>, либо прислать срез, где изделие занимает бо́льшую часть кадра. Пористость/размеры ниже — ориентировочные.</div>';
+  }
+
+  // cards
+  const cards=[
+    {k:'Пористость', v:pct(r.porosity), u:'%', acc:true,
+     info:'Доля изделия, занятая воздушными порами. Для объёмного стека — доля объёма, для одиночного среза — доля площади. Считается как отношение числа «воздушных» вокселей к общему числу вокселей изделия (без фона). Главный показатель структуры: чем выше, тем более воздушное изделие.'},
+    {k:'Размеры (сечение)', v:fmt(r.dimX,r.meta.hasScale?1:0)+'×'+fmt(r.dimY,r.meta.hasScale?1:0), u:r.unitLen, small:true,
+     info:'Габариты изделия в плоскости среза — ширина × высота описывающего прямоугольника. В миллиметрах при заданном (или авто-калиброванном) размере вокселя, иначе в пикселях.'},
+    {k:(r.meta.is3D&&r.volTotal!=null)?'Объём изделия':'Площадь сечения', v:(r.meta.is3D&&r.volTotal!=null)?fmt(r.volTotal,2):fmt(r.objArea,r.meta.hasScale?1:0), u:(r.meta.is3D&&r.volTotal!=null)?r.volUnit:r.unitArea,
+     info:'Площадь материала изделия в данном срезе (фон вне изделия исключён заливкой от границ кадра). Для стека срезов с заданным шагом пересчитывается в объём, см³: число вокселей × объём одного вокселя.'},
+    {k:'Число пор', v:r.nPores.toLocaleString('ru-RU'), u:'шт',
+     info:'Количество отдельных воздушных полостей. '+(r.meta.pore3D?'Объёмный счёт (26-связность) — пора через несколько срезов = один объект.':'2D-счёт по срезам.')+' '+(r.meta.poreSep==='watershed'?'Соприкасающиеся поры разделены методом watershed.':'Слипшиеся поры считаются как одна (watershed выключен).')+' Мелкие пятна отброшены как шум.'},
+    {k:'Ср. диаметр пор', v:fmt(r.meanD,r.meta.hasScale?3:1), u:r.unitLen,
+     info:r.meta.pore3D?'Средний эквивалентный диаметр поры — диаметр шара того же объёма (d = 2·∛(3V/4π)). Из-за крупных пор среднее обычно выше медианы.':'Средний эквивалентный диаметр поры — диаметр круга той же площади (d = 2·√(S/π)). Из-за крупных пор среднее обычно выше медианы.'},
+    {k:'Ср. толщина стенок', v:fmt(r.wallMean,r.meta.hasScale?3:1), u:r.unitLen,
+     info:(r.meta.wallMethod==='local'?'Строгая локальная толщина (Хильдебранд, '+(r.meta.pore3D?'3D':'2D')+'): диаметр наибольшего шара, вписанного в материал и накрывающего точку.':'Приближение по карте расстояний (2×EDT, '+(r.meta.pore3D?'3D':'2D')+').')+' Тонкие стенки + крупные поры → признак перерасстойки.'},
+    {k:'Кажущ. плотность', v: r.appDensity!=null? fmt(r.appDensity,3):'—', u:'г/см³', acc:r.appDensity!=null,
+     info:'Масса изделия, делённая на полный объём (вместе с порами). Формула: масса / объём. Считается только при заданной массе И объёме (стек с шагом или объём вручную). Если показано «—» — не хватает одного из этих двух чисел.'},
+    {k:'Истинная плотность', v: r.trueDensity!=null? fmt(r.trueDensity,3):'—', u:'г/см³',
+     info:'Плотность самого материала стенок, как если бы из изделия убрали все поры. Формула: кажущаяся плотность / (1 − пористость). Отражает свойства мякиша/ядра, а не изделия в целом.'},
+  ];
+  if(r.calMatDensity!=null){
+    cards.push({k:'Плотность стенок (калибр.)', v:fmt(r.calMatDensity,3), u:'г/см³', acc:true,
+      info:'Истинная плотность материала стенок по калибровке «яркость → плотность» (линия по вашим точкам). Не требует взвешивания. Качество подгонки R²='+fmt(r.calR2,3)+'.'});
+    cards.push({k:'Кажущ. плотность (калибр.)', v:fmt(r.calBulkDensity,3), u:'г/см³',
+      info:'Средняя (объёмная) плотность изделия с учётом пор по той же калибровке. Должна быть близка к «масса/объём», если масса задана — это перекрёстная проверка.'});
+  }
+  $('cards').innerHTML=cards.map(c=>`<div class="card${c.acc?' accent':''}">${c.info?`<button class="info" type="button" aria-label="Пояснение" data-tip="${c.info.replace(/"/g,'&quot;')}">i</button>`:''}<div class="k">${c.k}</div><div class="v${c.small?' small':''}">${c.v} <span class="u">${c.u}</span></div></div>`).join('');
+
+  // slice navigation (stacks only)
+  if(r.meta.nSlices>1){ $('sliceNav').style.display=''; const sl=$('sliceSlider');
+    sl.max=r.meta.nSlices-1; sl.value=0; $('sliceLabel').textContent='1 / '+r.meta.nSlices; $('slicePor').textContent=''; }
+  else $('sliceNav').style.display='none';
+
+  drawHistogram(r);
+  drawSegmentation(r);
+  drawPseudocolor(r);
+  drawGranulometry(r);
+  drawWall(r);
+  drawProfile(r);
+  drawTable(r);
+}
+
+// shared canvas helper (handle devicePixelRatio + CSS width)
+function prep(id, cssH){
+  const cv=$(id); const cssW=cv.clientWidth||cv.parentElement.clientWidth||600;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=cssW*dpr; cv.height=(cssH||cv.height)*dpr;
+  cv.style.height=(cssH||cv.height/dpr)+'px';
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,W:cssW,H:cssH||cv.height/dpr};
+}
+
+function drawHistogram(r){
+  const {ctx,W,H}=prep('histChart',220);
+  ctx.clearRect(0,0,W,H);
+  const pad={l:34,r:12,t:12,b:24};
+  const gw=W-pad.l-pad.r, gh=H-pad.t-pad.b;
+  let mx=0; for(let i=0;i<256;i++) mx=Math.max(mx,r.histAll[i]);
+  if(mx<=0)mx=1;
+  // bars
+  for(let i=0;i<256;i++){
+    const x=pad.l+i/256*gw, bw=gw/256+0.5;
+    const hh=r.histAll[i]/mx*gh;
+    // colour by class region
+    let col='#9DB0C5';
+    if(i<=r.meta.thr[0]) col=getCSS('--air');
+    else if(r.meta.nClasses===3 && i>r.meta.thr[1]) col=getCSS('--shell');
+    else col=getCSS('--crumb');
+    ctx.fillStyle=col; ctx.globalAlpha=.85;
+    ctx.fillRect(x, pad.t+gh-hh, bw, hh);
+  }
+  ctx.globalAlpha=1;
+  // thresholds
+  r.meta.thr.forEach((t,idx)=>{
+    const x=pad.l+t/256*gw;
+    ctx.strokeStyle=getCSS('--navy'); ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,pad.t+gh); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=getCSS('--navy'); ctx.font='600 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('T'+(idx+1)+'='+t, x, pad.t-2<10? pad.t+11 : 10);
+  });
+  // axes
+  ctx.strokeStyle='#D9D0C0'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+gh); ctx.lineTo(pad.l+gw,pad.t+gh); ctx.stroke();
+  ctx.fillStyle='#8A93A0'; ctx.font='10px system-ui'; ctx.textAlign='center';
+  for(let v=0;v<=255;v+=51){ const x=pad.l+v/256*gw; ctx.fillText(v,x,H-8); }
+  ctx.save(); ctx.translate(11,pad.t+gh/2); ctx.rotate(-Math.PI/2); ctx.fillText('частота',0,0); ctx.restore();
+}
+
+function drawSegmentation(r){
+  const p=r.primary; const {w,h,gray,cls}=p;
+  // original
+  const o=$('origCanvas'); o.width=w; o.height=h; o.style.height='auto';
+  const oc=o.getContext('2d'); const oi=oc.createImageData(w,h);
+  for(let i=0,j=0;i<w*h;i++,j+=4){ const g=gray[i]; oi.data[j]=oi.data[j+1]=oi.data[j+2]=g; oi.data[j+3]=255; }
+  oc.putImageData(oi,0,0);
+  // segmentation
+  const sCol={1:hex(getCSS('--air')),2:hex(getCSS('--crumb')),3:hex(getCSS('--shell'))};
+  const s=$('segCanvas'); s.width=w; s.height=h; s.style.height='auto';
+  const sc=s.getContext('2d'); const simg=sc.createImageData(w,h);
+  for(let i=0,j=0;i<w*h;i++,j+=4){
+    const c=cls[i];
+    if(c===0){ simg.data[j]=simg.data[j+1]=simg.data[j+2]=24; }
+    else { const col=sCol[c]||[150,150,150]; simg.data[j]=col[0]; simg.data[j+1]=col[1]; simg.data[j+2]=col[2]; }
+    simg.data[j+3]=255;
+  }
+  sc.putImageData(simg,0,0);
+  // legend
+  const L=[['Воздух / поры','--air'],['Материал (мякиш/ядро)','--crumb']];
+  if(r.meta.nClasses===3) L.push(['Плотный (корочка/скорлупа)','--shell']);
+  $('segLegend').innerHTML=L.map(([t,c])=>`<span><i style="background:${getCSS(c)}"></i>${t}</span>`).join('');
+}
+
+function drawGranulometry(r){
+  const {ctx,W,H}=prep('granChart',220);
+  ctx.clearRect(0,0,W,H);
+  const pad={l:38,r:12,t:12,b:34};
+  const gw=W-pad.l-pad.r, gh=H-pad.t-pad.b;
+  if(!r.diams.length){ ctx.fillStyle='#999';ctx.font='13px system-ui';ctx.textAlign='center';ctx.fillText('Поры не обнаружены',W/2,H/2);return; }
+  const nb=18; const maxD=r.diams[r.diams.length-1]||1;
+  const bins=new Array(nb).fill(0);
+  r.diams.forEach(d=>{ let b=Math.min(nb-1,Math.floor(d/maxD*nb)); bins[b]++; });
+  let mx=Math.max(...bins,1);
+  for(let i=0;i<nb;i++){
+    const x=pad.l+i/nb*gw, bw=gw/nb-2;
+    const hh=bins[i]/mx*gh;
+    ctx.fillStyle=getCSS('--terra'); ctx.globalAlpha=.82;
+    ctx.fillRect(x+1, pad.t+gh-hh, bw, hh);
+  }
+  ctx.globalAlpha=1;
+  ctx.strokeStyle='#D9D0C0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gh);ctx.lineTo(pad.l+gw,pad.t+gh);ctx.stroke();
+  ctx.fillStyle='#8A93A0';ctx.font='10px system-ui';ctx.textAlign='center';
+  for(let i=0;i<=4;i++){ const x=pad.l+i/4*gw; ctx.fillText(fmt(maxD*i/4, r.meta.hasScale?2:0),x,H-18); }
+  ctx.fillText('эквивалентный диаметр поры, '+r.unitLen, pad.l+gw/2, H-4);
+  ctx.save();ctx.translate(11,pad.t+gh/2);ctx.rotate(-Math.PI/2);ctx.fillText('число пор',0,0);ctx.restore();
+}
+
+function drawWall(r){
+  const {ctx,W,H}=prep('wallChart',200);
+  ctx.clearRect(0,0,W,H);
+  const pad={l:38,r:12,t:12,b:34};
+  const gw=W-pad.l-pad.r, gh=H-pad.t-pad.b;
+  if(!r.walls.length){ ctx.fillStyle='#999';ctx.font='13px system-ui';ctx.textAlign='center';ctx.fillText('—',W/2,H/2);return; }
+  const nb=20; const mxV=r.walls[Math.floor(r.walls.length*0.97)]||1;
+  const bins=new Array(nb).fill(0);
+  r.walls.forEach(v=>{ if(v>mxV)return; let b=Math.min(nb-1,Math.floor(v/mxV*nb)); bins[b]++; });
+  let mx=Math.max(...bins,1);
+  for(let i=0;i<nb;i++){
+    const x=pad.l+i/nb*gw, bw=gw/nb-2;
+    const hh=bins[i]/mx*gh;
+    ctx.fillStyle=getCSS('--navy2'); ctx.globalAlpha=.8;
+    ctx.fillRect(x+1,pad.t+gh-hh,bw,hh);
+  }
+  ctx.globalAlpha=1;
+  // median line
+  const medx=pad.l + (r.wallMed/ (r.meta.hasScale?1:1)) / mxV *gw;
+  ctx.strokeStyle=getCSS('--terra');ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(medx,pad.t);ctx.lineTo(medx,pad.t+gh);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=getCSS('--terra');ctx.font='600 10px system-ui';ctx.textAlign='left';
+  ctx.fillText('медиана '+fmt(r.wallMed,r.meta.hasScale?3:1), medx+4, pad.t+11);
+  ctx.strokeStyle='#D9D0C0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gh);ctx.lineTo(pad.l+gw,pad.t+gh);ctx.stroke();
+  ctx.fillStyle='#8A93A0';ctx.font='10px system-ui';ctx.textAlign='center';
+  for(let i=0;i<=4;i++){ const x=pad.l+i/4*gw; ctx.fillText(fmt(mxV*i/4,r.meta.hasScale?2:0),x,H-18); }
+  ctx.fillText('толщина стенки, '+r.unitLen, pad.l+gw/2, H-4);
+}
+
+function drawProfile(r){
+  const {ctx,W,H}=prep('profChart',200);
+  ctx.clearRect(0,0,W,H);
+  const pad={l:40,r:40,t:12,b:24};
+  const gw=W-pad.l-pad.r, gh=H-pad.t-pad.b;
+  const P=r.profile; const n=P.length;
+  // material fraction (left axis 0..1) + brightness (right axis 0..255)
+  ctx.strokeStyle='#D9D0C0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gh);ctx.lineTo(pad.l+gw,pad.t+gh);ctx.stroke();
+  // material fraction line
+  ctx.strokeStyle=getCSS('--terra');ctx.lineWidth=2;ctx.beginPath();
+  P.forEach((p,i)=>{ const x=pad.l+i/(n-1)*gw, y=pad.t+gh-p.frac*gh; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+  // brightness line
+  ctx.strokeStyle=getCSS('--air');ctx.lineWidth=1.5;ctx.setLineDash([5,3]);ctx.beginPath();
+  P.forEach((p,i)=>{ const x=pad.l+i/(n-1)*gw, y=pad.t+gh-(p.bright/255)*gh; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();ctx.setLineDash([]);
+  // labels
+  ctx.font='10px system-ui';
+  ctx.fillStyle=getCSS('--terra');ctx.textAlign='left';ctx.fillText('— доля материала',pad.l+4,pad.t+10);
+  ctx.fillStyle=getCSS('--air');ctx.fillText('-- яркость (прокси плотн.)',pad.l+4,pad.t+22);
+  ctx.fillStyle='#8A93A0';ctx.textAlign='center';ctx.fillText('верх изделия → низ',pad.l+gw/2,H-6);
+}
+
+function drawTable(r){
+  const rows=[];
+  const g=(t)=>rows.push(`<tr class="group"><td colspan="3">${t}</td></tr>`);
+  const row=(k,v,u)=>rows.push(`<tr><td>${k}</td><td class="val">${v}</td><td class="u">${u||''}</td></tr>`);
+
+  g('Геометрия');
+  row('Линейный размер X', fmt(r.dimX,r.meta.hasScale?2:0), r.unitLen);
+  row('Линейный размер Y', fmt(r.dimY,r.meta.hasScale?2:0), r.unitLen);
+  row('Площадь сечения', fmt(r.objArea,r.meta.hasScale?1:0), r.unitArea);
+  if(r.volTotal!=null) row(r.meta.is3D?'Объём изделия':'Объём изделия (задан вручную)', fmt(r.volTotal,2), r.volUnit);
+
+  g('Пористость');
+  row('Пористость'+(r.meta.is3D?'':' (площадная)'), pct(r.porosity), '%');
+  row('Доля «плотного» в материале', pct(r.denseFrac), '%');
+  row('Площадь пор', fmt(r.poreArea,r.meta.hasScale?1:0), r.unitArea);
+  if(r.volPore!=null) row(r.meta.is3D?'Объём пор':'Объём пор (оценка)', fmt(r.volPore,2), r.volUnit);
+
+  g('Гранулометрия пор');
+  row('Число пор', r.nPores.toLocaleString('ru-RU'), 'шт');
+  row('Средний эквив. диаметр', fmt(r.meanD,r.meta.hasScale?3:1), r.unitLen);
+  row('Медианный диаметр', fmt(r.medD,r.meta.hasScale?3:1), r.unitLen);
+  row('Максимальный диаметр', fmt(r.maxD,r.meta.hasScale?3:1), r.unitLen);
+  row('Средний форм-фактор (округлость)', fmt(r.meanCirc,3), '0–1');
+
+  g('Толщина стенок');
+  row('Средняя толщина (оценка)', fmt(r.wallMean,r.meta.hasScale?3:1), r.unitLen);
+  row('Медианная толщина (оценка)', fmt(r.wallMed,r.meta.hasScale?3:1), r.unitLen);
+
+  g('Плотность (через массу)');
+  row('Масса образца', r.mass>0?fmt(r.mass,1):'—', 'г');
+  row('Кажущаяся плотность', r.appDensity!=null?fmt(r.appDensity,3):'—', 'г/см³');
+  row('Истинная плотность стенок', r.trueDensity!=null?fmt(r.trueDensity,3):'—', 'г/см³');
+  row('Ср. яркость материала (прокси)', fmt(r.meanMatBright,1), '0–255');
+
+  if(r.calMatDensity!=null){
+    g('Плотность (калибровка яркость→плотность)');
+    row('Истинная плотность стенок (калибр.)', fmt(r.calMatDensity,3), 'г/см³');
+    row('Кажущаяся плотность (калибр.)', fmt(r.calBulkDensity,3), 'г/см³');
+    row('Калибровочная линия', 'ρ = '+fmt(r.calLine.a,4)+'·I + '+fmt(r.calLine.b,3), '');
+    row('Качество подгонки R²', fmt(r.calR2,3), '0–1');
+  }
+
+  g('Параметры расчёта');
+  row('Срезов обработано', r.meta.nSlices, 'шт');
+  row('Анализ пор', (r.meta.pore3D?'3D (26-связность)':(r.meta.is3D?'2D по срезам':'2D'))+(r.meta.poreSep==='watershed'?' + watershed':''), '');
+  row('Толщина стенок', r.meta.wallMethod==='local'?'локальная (Хильдебранд)':'2×EDT (приближение)', '');
+  row('Размер вокселя', r.meta.hasScale?fmt(r.meta.voxel,3):'не задан', r.meta.hasScale?'мм/px':'');
+  row('Порог сегментации', r.meta.thr.join(' / ')+(r.meta.usedManual?' (ручной)':' (Оцу)'), '0–255');
+  row('Классов сегментации', r.meta.nClasses, '');
+
+  $('metricTable').querySelector('tbody').innerHTML=rows.join('');
+}
+
+// ---------- utils ----------
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function hex(h){ h=h.replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+
+// ---------- exports ----------
+$('expPrint').addEventListener('click',()=>{
+  const r=lastReport;
+  const id=$('sampleId').value.trim()||'—', regime=$('sampleRegime').value.trim()||'—';
+  let meta='<b>Образец:</b> '+id+' &nbsp;·&nbsp; <b>Режим:</b> '+regime+' &nbsp;·&nbsp; <b>Дата:</b> '+new Date().toLocaleString('ru-RU');
+  if(r){ meta+='<br><b>Метод:</b> '+(r.meta.pore3D?'3D (26-связность)':'2D')+(r.meta.poreSep==='watershed'?' + watershed':'')+', толщина — '+(r.meta.wallMethod==='local'?'Хильдебранд':'2×EDT')
+      +' &nbsp;·&nbsp; <b>Срезов:</b> '+r.meta.nSlices+' &nbsp;·&nbsp; <b>Воксель:</b> '+(r.meta.hasScale?fmt(r.meta.voxel,3)+' мм':'не задан')
+      +(r.meta.percentile?' &nbsp;·&nbsp; норм. 1–99%':'')+(r.meta.roi?' &nbsp;·&nbsp; ROI '+r.meta.roi+'%':''); }
+  $('printMeta').innerHTML=meta;
+  window.print();
+});
+$('expCsv').addEventListener('click',()=>{
+  if(!lastReport)return; const r=lastReport;
+  const L=[['показатель','значение','ед.']];
+  L.push(['пористость_%', (r.porosity*100).toFixed(2), '%']);
+  L.push(['размер_X', r.dimX.toFixed(3), r.unitLen]);
+  L.push(['размер_Y', r.dimY.toFixed(3), r.unitLen]);
+  if(r.volTotal!=null)L.push(['объём', r.volTotal.toFixed(3), r.volUnit]);
+  L.push(['площадь_сечения', r.objArea.toFixed(3), r.unitArea]);
+  L.push(['число_пор', r.nPores, 'шт']);
+  L.push(['ср_диаметр_пор', r.meanD.toFixed(4), r.unitLen]);
+  L.push(['медиана_диаметр', r.medD.toFixed(4), r.unitLen]);
+  L.push(['макс_диаметр', r.maxD.toFixed(4), r.unitLen]);
+  L.push(['форм_фактор', r.meanCirc.toFixed(4), '0-1']);
+  L.push(['ср_толщина_стенок', r.wallMean.toFixed(4), r.unitLen]);
+  L.push(['медиана_толщины', r.wallMed.toFixed(4), r.unitLen]);
+  L.push(['кажущаяся_плотность', r.appDensity!=null?r.appDensity.toFixed(4):'', 'г/см3']);
+  L.push(['истинная_плотность', r.trueDensity!=null?r.trueDensity.toFixed(4):'', 'г/см3']);
+  L.push(['пороги_оцу', r.meta.thr.join('|'), '0-255']);
+  const csv='﻿'+L.map(r=>r.join(';')).join('\n');
+  dl(new Blob([csv],{type:'text/csv'}),'протокол_КТ.csv');
+});
+$('expJson').addEventListener('click',()=>{
+  if(!lastReport)return; const r=lastReport;
+  const out={
+    мета:r.meta, пористость:r.porosity, плотный_в_материале:r.denseFrac,
+    размер_X:r.dimX, размер_Y:r.dimY, ед_длины:r.unitLen,
+    площадь_сечения:r.objArea, объём:r.volTotal, ед_объёма:r.volUnit,
+    число_пор:r.nPores, ср_диаметр:r.meanD, медиана_диаметр:r.medD, макс_диаметр:r.maxD, форм_фактор:r.meanCirc,
+    толщина_стенок_ср:r.wallMean, толщина_стенок_медиана:r.wallMed,
+    масса:r.mass, кажущаяся_плотность:r.appDensity, истинная_плотность:r.trueDensity
+  };
+  dl(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),'протокол_КТ.json');
+});
+function dl(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+
+// ---- info tooltips: single shared floating element, works for any .info[data-tip] ----
+const floatTip=document.createElement('div'); floatTip.id='floatTip'; document.body.appendChild(floatTip);
+let tipOwner=null;
+function hideTip(){ floatTip.classList.remove('show'); tipOwner=null; }
+function showTipFor(btn){
+  floatTip.textContent=btn.getAttribute('data-tip')||'';
+  floatTip.classList.add('show');
+  const r=btn.getBoundingClientRect();
+  const tw=floatTip.offsetWidth, th=floatTip.offsetHeight;
+  const vw=document.documentElement.clientWidth;
+  let left=Math.max(8, Math.min(r.left, vw-tw-10));
+  let top=r.bottom+7;
+  if(r.bottom+th+14>window.innerHeight && r.top-th-10>0) top=r.top-th-7;
+  floatTip.style.left=(left+window.scrollX)+'px';
+  floatTip.style.top=(top+window.scrollY)+'px';
+  tipOwner=btn;
+}
+document.addEventListener('click', e=>{
+  const btn=e.target.closest('.info');
+  if(btn){ e.preventDefault(); e.stopPropagation(); if(tipOwner===btn) hideTip(); else showTipFor(btn); return; }
+  if(!e.target.closest('#floatTip')) hideTip();
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') hideTip(); });
+
+// redraw charts on resize
+let rT; window.addEventListener('resize',()=>{ hideTip(); clearTimeout(rT); rT=setTimeout(()=>{ if(lastReport) renderReport(lastReport); },250); });
+</script>
+</body>
+</html>
