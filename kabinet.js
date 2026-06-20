@@ -2,7 +2,7 @@
    календарь приборов, дашборд, вычисляемый протокол испытаний. Состояние — localStorage. Прототип. */
 (function () {
   "use strict";
-  var KEY = "wniikp_kabinet_v5";
+  var KEY = "wniikp_kabinet_v7";
   var LABS = [
     { id: "all", name: "Все лаборатории", methods: "сводно по всем лабораториям института" },
     { id: "micro", name: "Микробиология, гигиена и санитария", methods: "КМАФАнМ · дрожжи и плесени · БГКП · патогенные" },
@@ -13,13 +13,15 @@
   ];
   // приборы — справочник по умолчанию (далее живут в state.instruments: можно добавлять/удалять/ремонтировать)
   var DEFAULT_INSTR = [
-    { id: "kt", name: "КТ-сканер", verifiedTill: "11.2026", status: "ok", repairTill: "" },
-    { id: "nmr", name: "ЯМР-спектрометр", verifiedTill: "09.2026", status: "ok", repairTill: "" },
-    { id: "chrom", name: "Хроматограф", verifiedTill: "03.2026", status: "ok", repairTill: "" },
-    { id: "struct", name: "Структурометр", verifiedTill: "12.2026", status: "repair", repairTill: "25.06.2026" }
+    { id: "kt", name: "КТ-сканер", verifiedTill: "11.2026", status: "ok", repairTill: "", history: [{ date: "11.2024", type: "поверка", note: "Поверка, свидетельство № 1124/24" }, { date: "05.2025", type: "ТО", note: "Плановое техобслуживание" }] },
+    { id: "nmr", name: "ЯМР-спектрометр", verifiedTill: "07.2026", status: "ok", repairTill: "", history: [{ date: "07.2024", type: "поверка", note: "Поверка, свидетельство № 0907/24" }] },
+    { id: "chrom", name: "Хроматограф", verifiedTill: "03.2026", status: "ok", repairTill: "", history: [{ date: "03.2024", type: "поверка", note: "Поверка (срок истёк 03.2026 — требуется повторная)" }, { date: "01.2025", type: "ремонт", note: "Замена дейтериевой лампы" }] },
+    { id: "struct", name: "Структурометр", verifiedTill: "12.2026", status: "repair", repairTill: "25.06.2026", history: [{ date: "12.2024", type: "поверка", note: "Поверка, свидетельство № 1218/24" }, { date: "20.06.2026", type: "ремонт", note: "В ремонте до 25.06.2026 — замена тензодатчика" }] }
   ];
   var DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт"];
-  var STATUS = { new: "Принят", work: "В работе", done: "Готов" };
+  var STATUS = { new: "Принят", work: "В работе", review: "На утверждении", done: "Готов" };
+  var EXECUTORS = ["Зайцев Д.", "Кузнецова М.", "Петрова О.", "Иванова Т."];
+  var LAB_HEAD = "Белявская И. Г.";
 
   /* Справочник методик: норма по НД, единицы, тип границы, расширенная неопределённость U (k=2).
      Поиск по ключевому слову в названии показателя. op: '<=' — верхняя граница, '>=' — нижняя. */
@@ -97,21 +99,21 @@
 
   var SEED = {
     samples: [
-      { id: "К-101", lab: "micro", date: "08.06", due: "09.06", product: "Печенье сахарное", client: "ООО «Сластёна»", tests: ["КМАФАнМ (ГОСТ 33536-2015)", "Дрожжи и плесени (ГОСТ 10444.12-2013)", "БГКП (ГОСТ 31747-2012)"], status: "work" },
+      { id: "К-101", lab: "micro", date: "08.06", due: "09.06", product: "Печенье сахарное", client: "ООО «Сластёна»", tests: ["КМАФАнМ (ГОСТ 33536-2015)", "Дрожжи и плесени (ГОСТ 10444.12-2013)", "БГКП (ГОСТ 31747-2012)"], status: "work", executor: "Кузнецова М." },
       { id: "К-102", lab: "choc", date: "08.06", due: "12.06", product: "Шоколад молочный", client: "Фабрика «Заря»", tests: ["Идентификационные признаки шоколада", "Массовая доля масла какао (МВИ 45-…)", "Степень измельчения (ГОСТ Р 54052-2010)"], status: "new" },
       { id: "К-103", lab: "choc", date: "07.06", product: "Мармелад желейный", client: "ИП Орлова",
         tests: [
           { ind: "Массовая доля редуцирующих веществ", nd: "ГОСТ 5903-89", val: 18.5, unit: "%", lim: 23, op: "<=", u: 1.2 },
           { ind: "Массовая доля фруктового сырья", nd: "МВИ 39-…", val: 16.4, unit: "%", lim: 15, op: ">=", u: 1.0 },
           { ind: "Прочность студня", nd: "ГОСТ 26185-84", val: 14.2, unit: "Н", lim: 12, op: ">=", u: 0.8 }
-        ], status: "done" },
-      { id: "К-104", lab: "chrom", date: "07.06", due: "10.06", product: "Пряники заварные", client: "ООО «Тула-Хлеб»", tests: ["Жирнокислотный состав (ГОСТ 30623-2018)", "Перекисное число (ГОСТ 26593-85)", "Кислотное число (ГОСТ 31933-2012)"], status: "work" },
+        ], status: "done", executor: "Петрова О.", instrument: "struct", approvedBy: "Белявская И. Г.", protocolNo: "ПИ-2026-103", measuredDate: "08.06" },
+      { id: "К-104", lab: "chrom", date: "07.06", due: "10.06", product: "Пряники заварные", client: "ООО «Тула-Хлеб»", tests: ["Жирнокислотный состав (ГОСТ 30623-2018)", "Перекисное число (ГОСТ 26593-85)", "Кислотное число (ГОСТ 31933-2012)"], status: "work", executor: "Зайцев Д." },
       { id: "К-105", lab: "physchem", date: "06.06", product: "Конфеты глазированные", client: "Кондитер «Победа»",
         tests: [
           { ind: "КТ-морфометрия пористости", nd: "методика ВНИИКП", val: 27.0, unit: "%", lim: 30, op: "<=", u: 1.5 },
           { ind: "Массовая доля влаги", nd: "ГОСТ 5900-2014", val: 7.7, unit: "%", lim: 8.0, op: "<=", u: 0.4 },
           { ind: "Активность воды", nd: "ГОСТ ISO 21807-2015", val: 0.55, unit: "a_w", lim: 0.60, op: "<=", u: 0.02 }
-        ], status: "done" },
+        ], status: "done", executor: "Кузнецова М.", instrument: "kt", approvedBy: "Белявская И. Г.", protocolNo: "ПИ-2026-105", measuredDate: "07.06" },
       { id: "К-106", lab: "flour", date: "09.06", due: "13.06", product: "Вафли", client: "ООО «Хрустик»", tests: ["Массовая доля общего жира (ГОСТ 31902-2012)", "Намокаемость (ГОСТ 10114)", "Массовая доля вафельной крошки (ГОСТ 5897-90)"], status: "new" }
     ],
     instruments: JSON.parse(JSON.stringify(DEFAULT_INSTR)),
@@ -133,6 +135,9 @@
   }
   function instrById(id) { return state.instruments.filter(function (x) { return x.id === id; })[0]; }
   function fmtDate(iso) { var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : iso; }
+  var NOW_DATE = "20.06.2026"; // демо-«сегодня» для записей в историю
+  function monthsUntil(till) { var m = String(till || "").match(/(\d{2})\.(\d{4})/); if (!m) return null; return (+m[2] - 2026) * 12 + (+m[1] - 6); } // относительно июня 2026
+  function verifyWarn(i) { if (i.status === "repair") return false; var mu = monthsUntil(i.verifiedTill); return mu != null && mu >= 0 && mu <= 2; }
   function curLab() { return state.lab || "all"; }
   function curSamples() { var l = curLab(); return l === "all" ? state.samples : state.samples.filter(function (x) { return x.lab === l; }); }
   function labInfo() {
@@ -181,9 +186,10 @@
     avail.forEach(function (i) { used += Object.keys(state.bookings[i.id] || {}).length; });
     var load = slots ? Math.round(used / slots * 100) : 0;
     var down = state.instruments.filter(function (i) { return !instrAvail(i).ok; });
-    var planBanner = down.length
-      ? '<div class="kb-planwarn"><b>⚠ Недоступны для планирования:</b> ' + down.map(function (i) { return esc(i.name) + " — " + esc(instrAvail(i).label); }).join("; ") + '. Учитывайте при распределении работ.</div>'
-      : '';
+    var warns = state.instruments.filter(function (i) { return verifyWarn(i); });
+    var planBanner = "";
+    if (down.length) planBanner += '<div class="kb-planwarn"><b>⚠ Недоступны для планирования:</b> ' + down.map(function (i) { return esc(i.name) + " — " + esc(instrAvail(i).label); }).join("; ") + '. Учитывайте при распределении работ.</div>';
+    if (warns.length) planBanner += '<div class="kb-planwarn soft"><b>⏳ Скоро истекает поверка:</b> ' + warns.map(function (i) { return esc(i.name) + " — до " + esc(i.verifiedTill); }).join("; ") + ". Запланируйте поверку заранее.</div>";
     function card(n, l, cls) { return '<div class="kb-kpi ' + (cls || "") + '"><div class="n">' + n + '</div><div class="l">' + l + "</div></div>"; }
     var recentRows = s.slice().reverse().slice(0, 5).map(function (x) {
       return '<tr><td><b>' + esc(x.id) + '</b></td><td>' + esc(x.product) + '</td><td>' + esc(x.client) + '</td><td>' + badge(x.status) + "</td></tr>";
@@ -196,7 +202,8 @@
       '<div class="kb-grid2">' +
       '<div class="kb-box"><h3>Загрузка приборов (неделя)</h3>' + instrBars() + "</div>" +
       '<div class="kb-box"><h3>Последние образцы</h3>' + recent + "</div>" +
-      "</div>";
+      "</div>" +
+      '<div class="kb-box" style="margin-top:16px"><h3>Загрузка сотрудников (активные задания)</h3>' + execLoad() + "</div>";
   }
   function instrBars() {
     if (!state.instruments.length) return empty("Приборов нет. Добавьте в «Календаре приборов».");
@@ -208,9 +215,17 @@
       return '<div class="kb-bar"><span>' + esc(i.name) + '</span><div class="kb-track"><div class="kb-fill" style="width:' + pct + '%"></div></div><b>' + u + "/5</b></div>";
     }).join("");
   }
+  function execLoad() {
+    var s = curSamples(), map = {};
+    s.forEach(function (x) { if ((x.status === "work" || x.status === "review") && x.executor) map[x.executor] = (map[x.executor] || 0) + 1; });
+    var names = Object.keys(map);
+    if (!names.length) return empty("Активных заданий за сотрудниками нет.");
+    var max = Math.max.apply(null, names.map(function (n) { return map[n]; }));
+    return names.map(function (n) { var pct = Math.round(map[n] / max * 100); return '<div class="kb-bar"><span>' + esc(n) + '</span><div class="kb-track"><div class="kb-fill" style="width:' + pct + '%"></div></div><b>' + map[n] + "</b></div>"; }).join("");
+  }
 
   /* ---------- журнал образцов (LIMS) ---------- */
-  function badge(st) { var c = { new: "amber", work: "blue", done: "green" }[st]; return '<span class="kb-badge ' + c + '">' + STATUS[st] + "</span>"; }
+  function badge(st) { var c = { new: "amber", work: "blue", review: "review", done: "green" }[st]; return '<span class="kb-badge ' + c + '">' + STATUS[st] + "</span>"; }
   function resultPill(x) {
     var v = sampleVerdict(x);
     return v ? '<span class="kb-vres ' + v.cls + '">' + v.txt + "</span>" : "";
@@ -222,11 +237,13 @@
       var acts = "";
       if (x.status === "new") acts += '<button class="kb-mini" data-act="work" data-i="' + idx + '">→ В работу</button>';
       if (x.status === "work") { acts += '<button class="kb-mini" data-act="result" data-i="' + idx + '">→ Внести результат</button>'; acts += '<button class="kb-mini ghost" data-act="back-new" data-i="' + idx + '">↩ вернуть</button>'; }
+      if (x.status === "review") { acts += '<button class="kb-mini primary" data-act="approve" data-i="' + idx + '">Утвердить (зав. лаб.)</button>'; acts += '<button class="kb-mini" data-act="proto" data-i="' + idx + '">Протокол</button>'; acts += '<button class="kb-mini ghost" data-act="back-work" data-i="' + idx + '">↩ в работу</button>'; }
       if (x.status === "done") { acts += '<button class="kb-mini primary" data-act="proto" data-i="' + idx + '">Протокол</button>'; acts += '<button class="kb-mini ghost" data-act="back-work" data-i="' + idx + '">↩ в работу</button>'; }
+      var exNote = x.executor ? '<div class="kb-sub">исп.: ' + esc(x.executor) + "</div>" : "";
       var tests = (x.tests || []).map(function (t) { return "<li>" + esc(testName(t)) + "</li>"; }).join("");
       var ds = dueState(x);
       return '<tr' + (ds && ds.cls === "over" ? ' class="kb-over"' : "") + '><td><b>' + esc(x.id) + '</b><div class="kb-sub">' + esc(x.date) + (x.due ? " · срок " + esc(x.due) : "") + '</div></td>' +
-        "<td>" + esc(x.product) + '<div class="kb-sub">' + esc(x.client) + "</div></td>" +
+        "<td>" + esc(x.product) + '<div class="kb-sub">' + esc(x.client) + "</div>" + exNote + "</td>" +
         '<td><ul class="kb-tests">' + tests + "</ul></td>" +
         "<td>" + badge(x.status) + resultPill(x) + duePill(x) + "</td><td>" + acts + "</td></tr>";
     }).join("");
@@ -255,10 +272,11 @@
         if (a === "work") { x.status = "work"; save(); refresh(); toast(x.id + " — в работе"); }
         else if (a === "result") { openResultModal(i); }
         else if (a === "proto") { showProtocol(x); }
+        else if (a === "approve") { x.status = "done"; x.approvedBy = LAB_HEAD; save(); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
         else if (a === "back-new") { x.status = "new"; save(); refresh(); toast(x.id + " возвращён в «Принят»"); }
         else if (a === "back-work") {
           var snapshot = JSON.parse(JSON.stringify(x));
-          x.status = "work";
+          x.status = "work"; x.approvedBy = "";
           save(); refresh();
           undo = function () { state.samples[i] = snapshot; save(); refresh(); toast("Действие отменено"); };
           toast(x.id + " возвращён в работу", "Отменить");
@@ -288,6 +306,10 @@
       '<div class="kb-modal-box"><div class="kb-modal-head"><b>Внести результаты — ' + esc(x.id) + " · " + esc(x.product) + '</b>' +
       '<button class="kb-mini" type="button" data-res="close">Отмена</button></div>' +
       '<div class="proto"><p class="kb-sub">Введите измеренное значение по каждому показателю. Норму по НД и расширенную неопределённость U (k=2) система подставит из справочника методик и сама вынесет вывод о соответствии с учётом неопределённости.</p>' +
+      '<div class="kb-form" style="margin-bottom:12px">' +
+        '<div class="kb-fld"><label for="res-exec">Исполнитель</label><select id="res-exec" class="kb-resin">' + EXECUTORS.map(function (e) { return "<option" + (x.executor === e ? " selected" : "") + ">" + esc(e) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="kb-fld"><label for="res-instr">Прибор (оборудование)</label><select id="res-instr" class="kb-resin"><option value="">— не указан —</option>' + state.instruments.map(function (ins) { return '<option value="' + esc(ins.id) + '"' + (x.instrument === ins.id ? " selected" : "") + ">" + esc(ins.name) + "</option>"; }).join("") + "</select></div>" +
+      "</div>" +
       '<table class="proto-tab"><thead><tr><th>№</th><th>Показатель / НД · норма</th><th>Результат измерения</th></tr></thead><tbody>' + rows + "</tbody></table>" +
       '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-res="save" data-i="' + i + '">Сохранить и сформировать протокол</button><button class="kb-mini" type="button" data-res="close">Отмена</button></div></div></div>';
     openModal(box);
@@ -305,10 +327,14 @@
       if (raw !== "" && raw != null) t.val = +raw;
       return t;
     });
-    x.status = "done";
+    x.executor = ($("res-exec") || {}).value || x.executor || "";
+    x.instrument = ($("res-instr") || {}).value || x.instrument || "";
+    x.protocolNo = x.protocolNo || ("ПИ-2026-" + x.id.replace(/\D/g, ""));
+    x.measuredDate = x.date;
+    x.status = "review";
     save(); closeModal($("kb-res-modal")); renderJournal();
     var v = sampleVerdict(x);
-    toast(x.id + " готов — заключение: " + (v ? v.txt : "введите значения"));
+    toast(x.id + ": результаты внесены, на утверждении у завлаба (" + (v ? v.txt : "—") + ")");
     showProtocol(x);
   }
 
@@ -321,12 +347,14 @@
         var bk = (state.bookings[i.id] || {})[di];
         return '<td class="kb-cell ' + (bk ? "busy" : "free") + (a.ok ? "" : " locked") + '" data-i="' + i.id + '" data-d="' + di + '">' + (bk ? esc(bk) : (a.ok ? "+" : "✕")) + "</td>";
       }).join("");
-      var pills = '<span class="kb-ver ' + (a.reason === "verify" ? "bad" : "ok") + '">поверка до ' + esc(i.verifiedTill) + (a.reason === "verify" ? " · просрочена" : "") + "</span>";
+      var verCls = a.reason === "verify" ? "bad" : (verifyWarn(i) ? "warn" : "ok");
+      var pills = '<span class="kb-ver ' + verCls + '">поверка до ' + esc(i.verifiedTill) + (a.reason === "verify" ? " · просрочена" : (verifyWarn(i) ? " · истекает" : "")) + "</span>";
       if (i.status === "repair") pills += ' <span class="kb-ver repair">в ремонте до ' + esc(i.repairTill || "—") + "</span>";
       var acts = '<div class="kb-instr-acts">' +
         (i.status === "repair"
           ? '<button class="kb-mini" type="button" data-instr="unrepair" data-i="' + i.id + '">Вернуть в строй</button>'
           : '<button class="kb-mini" type="button" data-instr="repair" data-i="' + i.id + '">В ремонт</button>') +
+        '<button class="kb-mini ghost" type="button" data-instr="hist" data-i="' + i.id + '">История</button>' +
         '<button class="kb-mini ghost" type="button" data-instr="del" data-i="' + i.id + '">Удалить</button></div>';
       return '<tr class="' + (a.ok ? "" : "kb-row-down") + '"><td><b>' + esc(i.name) + "</b><div class=\"kb-sub\">" + pills + "</div>" + acts + "</td>" + cells + "</tr>";
     }).join("") : '<tr><td colspan="' + (DAYS.length + 1) + '">' + empty("Приборов нет. Добавьте первый кнопкой «+ Добавить прибор».") + "</td></tr>";
@@ -374,13 +402,26 @@
         '<div class="proto"><div class="kb-fld"><label for="ni-name">Название прибора</label><input id="ni-name" style="' + inp + '" placeholder="напр. Вискозиметр Брукфилда"></div>' +
         '<div class="kb-fld"><label>Поверка действительна до (месяц / год)</label><div style="display:flex;gap:8px"><select id="ni-mon" class="kb-resin" style="flex:1">' + monOpts + '</select><input id="ni-year" class="kb-resin" type="number" min="2026" max="2035" value="2027" style="width:120px"></div></div>' +
         '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-instr="add-save">Добавить прибор</button><button class="kb-mini" type="button" data-instr="close">Отмена</button></div></div></div>';
-    } else {
+    } else if (mode === "repair") {
       var instr = instrById(iid);
       box.innerHTML =
         '<div class="kb-modal-box" style="max-width:450px"><div class="kb-modal-head"><b>В ремонт: ' + esc(instr.name) + '</b><button class="kb-mini" type="button" data-instr="close">Отмена</button></div>' +
         '<div class="proto"><div class="kb-fld"><label for="ri-date">Ожидаемая дата возврата в строй</label><input id="ri-date" class="kb-resin" type="date" style="width:100%"></div>' +
         '<p class="kb-sub">Пока прибор в ремонте, бронировать его нельзя. Статус и дата возврата видны в календаре и на дашборде — сотрудники и директор планируют работу с учётом простоя.</p>' +
         '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-instr="repair-save" data-i="' + iid + '">Отправить в ремонт</button><button class="kb-mini" type="button" data-instr="close">Отмена</button></div></div></div>';
+    } else if (mode === "hist") {
+      var inst = instrById(iid);
+      var hrows = (inst.history || []).slice().reverse().map(function (h) {
+        var cls = h.type === "ремонт" ? "rep" : (h.type === "ТО" ? "to" : "ver");
+        return "<tr><td>" + esc(h.date) + '</td><td><span class="kb-histtype ' + cls + '">' + esc(h.type) + "</span></td><td>" + esc(h.note || "") + "</td></tr>";
+      }).join("");
+      var statusTxt = inst.status === "repair" ? "в ремонте до " + esc(inst.repairTill || "—") : "в работе";
+      var verTxt = "до " + esc(inst.verifiedTill) + (isVerifyExpired(inst.verifiedTill) ? " · просрочена" : (verifyWarn(inst) ? " · истекает" : ""));
+      box.innerHTML =
+        '<div class="kb-modal-box" style="max-width:580px"><div class="kb-modal-head"><b>История прибора: ' + esc(inst.name) + '</b><button class="kb-mini" type="button" data-instr="close">Закрыть</button></div>' +
+        '<div class="proto"><table class="proto-meta"><tbody><tr><td>Текущая поверка</td><td>' + verTxt + "</td></tr><tr><td>Статус</td><td>" + statusTxt + "</td></tr></tbody></table>" +
+        (hrows ? '<table class="proto-tab"><thead><tr><th>Дата</th><th>Событие</th><th>Примечание</th></tr></thead><tbody>' + hrows + "</tbody></table>" : empty("Записей в истории пока нет.")) +
+        '<div class="btnrow" style="margin-top:14px"><button class="kb-mini" type="button" data-instr="close">Закрыть</button></div></div></div>';
     }
     openModal(box);
   }
@@ -400,17 +441,35 @@
       : '<p class="proto-concl kb-sub">Числовые результаты ещё не внесены — заключение формируется после ввода значений.</p>';
     $("kb-proto-body").innerHTML =
       '<div class="proto-head"><div><b>ВНИИ кондитерской промышленности</b><br>филиал ФГБНУ «ФНЦ пищевых систем им. В.М. Горбатова» РАН<br>107023, Москва, ул. Электрозаводская, 20с3</div>' +
-      '<div class="proto-no">ПРОТОКОЛ ИСПЫТАНИЙ<br>№ ' + esc(x.id) + "/2026</div></div>" +
+      '<div class="proto-no">ПРОТОКОЛ ИСПЫТАНИЙ<br>№ ' + esc(x.protocolNo || (x.id + "/2026")) + "</div></div>" +
+      (x.status === "review" ? '<p class="proto-review">⏳ Черновик протокола — ожидает утверждения заведующим лабораторией.</p>' : "") +
       '<table class="proto-meta"><tbody>' +
       "<tr><td>Образец</td><td><b>" + esc(x.product) + "</b> (" + esc(x.id) + ")</td></tr>" +
       "<tr><td>Заказчик</td><td>" + esc(x.client) + "</td></tr>" +
       "<tr><td>Дата поступления</td><td>" + esc(x.date) + ".2026</td></tr>" +
+      (x.measuredDate ? "<tr><td>Дата испытаний</td><td>" + esc(x.measuredDate) + ".2026</td></tr>" : "") +
+      (x.instrument ? "<tr><td>Оборудование</td><td>" + esc((instrById(x.instrument) || {}).name || x.instrument) + (instrById(x.instrument) && instrById(x.instrument).verifiedTill ? " · поверка до " + esc(instrById(x.instrument).verifiedTill) : "") + "</td></tr>" : "") +
       "</tbody></table>" +
       '<table class="proto-tab"><thead><tr><th>№</th><th>Показатель / метод (НД)</th><th>Результат</th><th>Норма по НД</th><th>Вывод</th></tr></thead><tbody>' + rows + "</tbody></table>" +
       concl +
-      '<div class="proto-sign"><span>Зав. лабораторией ______________</span><span>Исполнитель ______________</span></div>' +
+      '<div class="proto-sign"><span>Зав. лабораторией: ' + (x.approvedBy ? "<b>" + esc(x.approvedBy) + "</b>" : "________ (не утверждён)") + '</span><span>Исполнитель: ' + (x.executor ? "<b>" + esc(x.executor) + "</b>" : "________") + "</span></div>" +
       '<p class="kb-sub" style="margin-top:10px">Демонстрационный протокол. Вывод по каждому показателю вычисляется сравнением результата с нормой НД с учётом расширенной неопределённости U (k=2). Реальные результаты, бланк и подписи формирует институт.</p>';
     openModal($("kb-proto-modal"));
+  }
+
+  function downloadProtocolPdf() {
+    var body = $("kb-proto-body").innerHTML;
+    var w = window.open("", "_blank");
+    if (!w) { toast("Разрешите всплывающие окна, чтобы сохранить PDF"); return; }
+    var css = "body{font-family:Inter,Arial,sans-serif;color:#1b2733;padding:28px;max-width:760px;margin:0 auto}" +
+      ".proto-head{display:flex;justify-content:space-between;gap:20px;border-bottom:2px solid #1b2733;padding-bottom:12px;font-size:12.5px;line-height:1.4}" +
+      ".proto-no{text-align:right;font-weight:800;font-size:14px}.proto-review{background:#fff1db;color:#9a6400;padding:8px 12px;border-radius:8px;font-size:13px}" +
+      ".proto-meta{width:100%;border-collapse:collapse;margin:14px 0}.proto-meta td{padding:5px 6px;border-bottom:1px solid #e6eaef;font-size:14px}.proto-meta td:first-child{color:#586673;width:170px}" +
+      ".proto-tab{width:100%;border-collapse:collapse;margin:8px 0 14px}.proto-tab th,.proto-tab td{border:1px solid #d9dee5;padding:8px 10px;font-size:13px;text-align:left}.proto-tab th{background:#fafafa}.proto-tab td.r{text-align:center;font-weight:700}" +
+      ".r.pass{color:#1d7a3a}.r.fail{color:#b3261e}.r.border{color:#9a6400}.proto-concl{font-size:14px;margin:10px 0}.proto-sign{display:flex;justify-content:space-between;margin-top:30px;font-size:13px}" +
+      ".kb-sub{color:#586673;font-size:12px}.kb-vres{padding:2px 8px;border-radius:8px;font-weight:700}.kb-vres.pass{background:#e8f6ec;color:#1d7a3a}.kb-vres.border{background:#fff1db;color:#9a6400}.kb-vres.fail{background:#fde8e8;color:#b3261e}";
+    w.document.write('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Протокол испытаний ВНИИКП</title><style>' + css + "</style></head><body>" + body + "<scr" + "ipt>window.onload=function(){setTimeout(function(){window.print();},150);}</scr" + "ipt></body></html>");
+    w.document.close();
   }
 
   /* ---------- модалки: открытие/закрытие, фокус, Esc ---------- */
@@ -434,6 +493,7 @@
     }
     $("kb-proto-close").addEventListener("click", function () { closeModal($("kb-proto-modal")); });
     $("kb-proto-print").addEventListener("click", function () { window.print(); });
+    $("kb-proto-pdf").addEventListener("click", downloadProtocolPdf);
 
     // делегирование для модалок брони и результатов
     document.addEventListener("click", function (e) {
@@ -464,18 +524,21 @@
           if (!nm) { toast("Укажите название прибора"); return; }
           var mon = ("0" + (($("ni-mon") || {}).value || "1")).slice(-2), yr = ($("ni-year") || {}).value || "2027";
           var nid = "u" + (state.instruments.length + 1) + nm.replace(/\W+/g, "").slice(0, 4).toLowerCase();
-          state.instruments.push({ id: nid, name: nm, verifiedTill: mon + "." + yr, status: "ok", repairTill: "" });
+          state.instruments.push({ id: nid, name: nm, verifiedTill: mon + "." + yr, status: "ok", repairTill: "", history: [{ date: NOW_DATE, type: "поверка", note: "Прибор внесён в систему, поверка до " + mon + "." + yr }] });
           save(); closeModal($("kb-instr-modal")); renderCal(); renderDash(); toast("Прибор «" + nm + "» добавлен");
         }
         else if (ia === "repair") { openInstrModal("repair", iid); }
+        else if (ia === "hist") { openInstrModal("hist", iid); }
         else if (ia === "repair-save") {
           var d = ($("ri-date") || {}).value;
           if (!d) { toast("Укажите дату возврата"); return; }
           var inst = instrById(iid); inst.status = "repair"; inst.repairTill = fmtDate(d);
+          inst.history = inst.history || []; inst.history.push({ date: NOW_DATE, type: "ремонт", note: "Отправлен в ремонт до " + inst.repairTill });
           save(); closeModal($("kb-instr-modal")); renderCal(); renderDash(); toast(inst.name + " — в ремонте до " + inst.repairTill);
         }
         else if (ia === "unrepair") {
           var inst2 = instrById(iid); inst2.status = "ok"; inst2.repairTill = "";
+          inst2.history = inst2.history || []; inst2.history.push({ date: NOW_DATE, type: "ремонт", note: "Возвращён в строй после ремонта" });
           save(); renderCal(); renderDash(); toast(inst2.name + " возвращён в строй");
         }
         else if (ia === "del") {
