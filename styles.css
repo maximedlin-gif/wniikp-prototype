@@ -197,6 +197,11 @@ body.vi .brand-mono{display:flex!important}
 
 /* service page */
 .svc-hero{background:#fff;border-bottom:1px solid var(--line);padding:14px 0 40px}
+.popcard{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-decoration:none;box-shadow:var(--shadow);transition:.15s}
+.popcard:hover{border-color:var(--blue);transform:translateY(-2px)}
+.popcard b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.popcard span{display:block;color:var(--muted);font-size:12.5px;line-height:1.4}
+.related a{color:var(--blue);font-weight:600}
 .svc-facts{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0}
 .fact{background:var(--blue-soft);border-radius:12px;padding:12px 18px;min-width:150px}
 .fact .fl{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
