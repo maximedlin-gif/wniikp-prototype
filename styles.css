@@ -464,6 +464,12 @@ body.vi.vi-sz-3{zoom:1.4}
 body.vi.vi-ls h1,body.vi.vi-ls h2,body.vi.vi-ls h3,body.vi.vi-ls h4,
 body.vi.vi-ls p,body.vi.vi-ls li,body.vi.vi-ls a,body.vi.vi-ls span,body.vi.vi-ls label{
   letter-spacing:.1em!important;word-spacing:.16em!important;line-height:1.8!important}
+/* логотип-заглушка в VI: не растягивать буквами/интервалом — иначе не влезают в значок и текст разъезжается */
+body.vi .brand-mono .mark,body.vi.vi-ls .brand-mono .mark,
+body.vi.vi-ls .brand-mono span,body.vi.vi-ls .brand-mono b{
+  letter-spacing:normal!important;word-spacing:normal!important;line-height:1.05!important}
+body.vi.vi-ls .brand-mono .bt{line-height:1.2!important}
+body.vi .brand-mono{align-items:center!important}
 
 /* отключение изображений */
 body.vi.vi-noimg img{display:none!important}
