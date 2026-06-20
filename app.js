@@ -454,3 +454,16 @@ document.addEventListener('click', e=>{
   var p=new URLSearchParams(location.search).get('q'); if(p)input.value=p;
   run();
 })();
+
+// ---- Вакансии: если их редактировали в админке (localStorage), показываем актуальный список ----
+(function(){
+  var box=document.getElementById('vacList'); if(!box) return;
+  function esc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});}
+  var data; try{var a=JSON.parse(localStorage.getItem('wniikp_admin_v1')||'null'); if(a&&a.vacancies)data=a.vacancies;}catch(e){}
+  if(!data||!data.length) return; // нет правок из админки — оставляем статические карточки страницы
+  var pub=data.filter(function(v){return v.published!==false;});
+  if(!pub.length){box.innerHTML='<p class="muted" style="grid-column:1/-1">Сейчас открытых вакансий нет. Резюме можно прислать на <a href="mailto:conditerprom@mail.ru">conditerprom@mail.ru</a> — рассмотрим при появлении позиций.</p>'; return;}
+  box.innerHTML=pub.map(function(v){
+    return '<div class="scn"><span class="tag">'+esc(v.tag)+'</span><h3><svg class="ic" aria-hidden="true"><use href="#'+(v.icon||'ico-doc')+'"></use></svg> '+esc(v.title)+'</h3><ul class="pkg">'+(v.reqs||[]).map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul><div class="foot"><span class="badge green">'+esc(v.type||'')+'</span><a class="btn btn-primary" href="kontakty.html#zayavka">Откликнуться</a></div></div>';
+  }).join('');
+})();

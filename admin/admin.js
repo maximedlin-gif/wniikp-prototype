@@ -70,6 +70,12 @@ var DATA={
   'КТ-контроль':'Неразрушающий контроль внутренней структуры изделий по компьютерной томограмме: пористость, размер и распределение пор, плотность — без разрезания образца.',
   'Контакты/реквизиты':'107023, Москва, ул. Электрозаводская, д. 20, стр. 3. Тел. +7 (495) 963-65-35, conditerprom@mail.ru.'
  },
+ vacancies:[
+  {id:'V-1',tag:'Научный отдел',icon:'ico-doc',title:'Научный сотрудник (физико-химические методы)',reqs:['Высшее образование (химия / пищевые технологии)','Опыт лабораторных исследований','Работа с хроматографией / спектроскопией'],type:'Полная занятость',published:true},
+  {id:'V-2',tag:'КТ-направление',icon:'ico-scan',title:'Инженер-исследователь (КТ-морфометрия)',reqs:['Техническое образование','Интерес к обработке изображений / данным','Аккуратность, внимание к деталям'],type:'Полная занятость',published:true},
+  {id:'V-3',tag:'Лаборатория',icon:'ico-info',title:'Лаборант-микробиолог',reqs:['Среднее специальное / высшее образование','Опыт работы в микробиологической лаборатории','Знание санитарных норм'],type:'Полная занятость',published:true},
+  {id:'V-4',tag:'Стажировка',icon:'ico-book',title:'Стажёр / аспирант',reqs:['Для студентов и выпускников профильных вузов','Участие в исследованиях института','Возможность публикаций и обучения'],type:'Стажировка',published:true}
+ ],
  users:[
   {nm:'Белецкий С. Л.',role:'Директор',dept:'Дирекция',acc:'Полный'},
   {nm:'Орлова Е.',role:'Менеджер',dept:'Отдел продаж',acc:'Заявки'},
@@ -98,11 +104,11 @@ var ROLES={
  accountant:{label:'Бухгалтерия',who:'Иванова Н.',menu:['dash','tasks','finance','leads','reports']},
  lab_head:{label:'Рук. лаборатории',who:'Белявская И. Г.',menu:['dash','tasks','lab','reports']},
  scientist:{label:'Научный сотрудник',who:'Зайцев Д.',menu:['tasks','lab']},
- support:{label:'Техподдержка',who:'Смирнов В.',menu:['dash','tasks','tickets','content','holidays']},
- admin:{label:'Администратор',who:'Администратор',menu:['dash','tasks','leads','finance','lab','content','holidays','tickets','users']}
+ support:{label:'Техподдержка',who:'Смирнов В.',menu:['dash','tasks','tickets','content','vacancies','holidays']},
+ admin:{label:'Администратор',who:'Администратор',menu:['dash','tasks','leads','finance','lab','content','vacancies','holidays','tickets','users']}
 };
 var MOD={dash:['i-dash','Дашборд'],tasks:['i-report','Поручения'],leads:['i-leads','Заявки'],finance:['i-fin','Финансы'],
- lab:['i-lab','Лаборатория'],content:['i-content','Контент сайта'],tickets:['i-help','Техподдержка'],
+ lab:['i-lab','Лаборатория'],content:['i-content','Контент сайта'],vacancies:['i-users','Вакансии'],tickets:['i-help','Техподдержка'],
  users:['i-users','Пользователи и права'],reports:['i-report','Отчёты'],holidays:['i-cal','Праздники']};
 var STATUS={new:['b-new','Новая'],work:['b-work','В работе'],bill:['b-bill','Счёт выставлен'],paid:['b-paid','Оплачено'],done:['b-done','Выполнено']};
 function sb(s){return '<span class="badge '+STATUS[s][0]+'">'+STATUS[s][1]+'</span>';}
@@ -111,10 +117,10 @@ var holIconData=null; // data-URL загруженной своей иконки
 
 // ---------- сохранение демо-данных (localStorage) ----------
 var ADMKEY='wniikp_admin_v1';
-var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users}));
-function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,log:LOG,uType:state.uType}));}catch(e){}}
-function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.tasks)DATA.tasks=s.tasks; if(s.content)DATA.content=s.content; if(s.users)DATA.users=s.users; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
-function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));DATA.tasks=JSON.parse(JSON.stringify(DEFAULTS.tasks));DATA.content=JSON.parse(JSON.stringify(DEFAULTS.content||{}));DATA.users=JSON.parse(JSON.stringify(DEFAULTS.users));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
+var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies}));
+function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies,log:LOG,uType:state.uType}));}catch(e){}}
+function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.tasks)DATA.tasks=s.tasks; if(s.content)DATA.content=s.content; if(s.users)DATA.users=s.users; if(s.vacancies)DATA.vacancies=s.vacancies; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
+function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));DATA.tasks=JSON.parse(JSON.stringify(DEFAULTS.tasks));DATA.content=JSON.parse(JSON.stringify(DEFAULTS.content||{}));DATA.users=JSON.parse(JSON.stringify(DEFAULTS.users));DATA.vacancies=JSON.parse(JSON.stringify(DEFAULTS.vacancies||[]));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
 loadData();
 
 // ---------- НДС и тип учреждения ----------
@@ -311,6 +317,29 @@ function openContentEditor(name){var txt=(DATA.content&&DATA.content[name])||'';
 function taskReportForm(id){var t=DATA.tasks.find(function(x){return x.id===id;}); if(!t)return;
  openDrawer('<div class="dh"><div><h3>Отчёт по '+id+'</h3><div class="muted" style="font-size:13px">'+esc(t.title)+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Текст отчёта</label><textarea id="trep" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit">'+esc(t.report||'')+'</textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="task-report-save" data-id="'+id+'">Отправить отчёт</button><button class="btn btn-ghost" data-act="task-open" data-id="'+id+'">Назад</button></div></div>');
 }
+function mVacancies(){
+ var rows=DATA.vacancies.map(function(v){var off=v.published===false;
+  return '<tr'+(off?' class="user-off"':'')+'><td><b>'+esc(v.title)+'</b><div class="kb-sub">'+v.reqs.length+' '+plural(v.reqs.length,'требование','требования','требований')+'</div></td><td>'+esc(v.tag)+'</td><td>'+esc(v.type)+'</td><td>'+(off?'<span class="badge b-done">скрыта</span>':'<span class="badge b-paid">на сайте</span>')+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="vac-edit" data-id="'+v.id+'">Изменить</button><button class="btn btn-ghost" data-act="vac-toggle" data-id="'+v.id+'">'+(off?'Опубликовать':'Скрыть')+'</button><button class="btn btn-ghost" data-act="vac-del" data-id="'+v.id+'">Удалить</button></td></tr>';
+ }).join('');
+ return '<div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>'+ic('i-users')+' Вакансии института</b><span class="muted">отображаются на странице «Вакансии»</span><button class="btn btn-ghost" style="margin-left:auto" data-act="vac-export">Экспорт vakansii.json</button><button class="btn btn-primary" data-act="vac-add">+ Добавить вакансию</button></div>'+
+  '<div class="panel">'+(DATA.vacancies.length?'<table class="tbl"><tr><th>Должность</th><th>Направление</th><th>Занятость</th><th>Статус</th><th></th></tr>'+rows+'</table>':'<div class="empty">Вакансий нет. Добавьте первую.</div>')+'</div>'+
+  '<div class="norm-note">Изменения попадают на страницу «Вакансии» через файл <b>vakansii.json</b> (кнопка «Экспорт» → файл в корень сайта; в боевой версии сохраняется автоматически). В прототипе страница подхватывает правки из этой админки в том же браузере.</div>';
+}
+function openVacancyForm(id){var v=id?DATA.vacancies.find(function(x){return x.id===id;}):{tag:'',title:'',icon:'ico-doc',reqs:[],type:'Полная занятость',published:true};
+ var icons=[['ico-doc','Документ'],['ico-scan','КТ'],['ico-info','Лаборатория'],['ico-book','Стажировка']];
+ var iconOpts=icons.map(function(o){return '<option value="'+o[0]+'"'+(v.icon===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+ var types=['Полная занятость','Частичная занятость','Стажировка','Удалённо','Проектная работа'];
+ var typeOpts=types.map(function(t){return '<option'+(v.type===t?' selected':'')+'>'+t+'</option>';}).join('');
+ var inp='width:100%;padding:10px;border:1px solid #e6eaef;border-radius:9px;font-family:inherit';
+ openDrawer('<div class="dh"><h3>'+(id?'Изменить вакансию':'Новая вакансия')+'</h3><button class="x" data-act="close">×</button></div><div class="db">'+
+  '<div class="fld"><label>Должность</label><input id="vti" style="'+inp+'" value="'+esc(v.title)+'" placeholder="Напр.: Лаборант-микробиолог"></div>'+
+  '<div class="fld"><label>Направление</label><input id="vta" style="'+inp+'" value="'+esc(v.tag)+'" placeholder="Напр.: Лаборатория"></div>'+
+  '<div class="fld"><label>Иконка</label><select id="vic" style="'+inp+'">'+iconOpts+'</select></div>'+
+  '<div class="fld"><label>Занятость</label><select id="vty" style="'+inp+'">'+typeOpts+'</select></div>'+
+  '<div class="fld"><label>Требования (по одному в строке)</label><textarea id="vrq" rows="4" style="'+inp+'">'+esc(v.reqs.join('\n'))+'</textarea></div>'+
+  '<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="vpub"'+(v.published!==false?' checked':'')+'> Показывать на сайте</label>'+
+  '<div class="btnrow"><button class="btn btn-primary" data-act="vac-save" data-id="'+(id||'')+'">Сохранить</button><button class="btn btn-ghost" data-act="close">Отмена</button></div></div>');
+}
 function mContent(){var secs=[['Новости','novosti.html'],['Услуги','uslugi.html'],['Обучение','obuchenie.html'],['Кейсы','keysy.html'],['КТ-контроль','kt-morfometriya.html'],['Контакты/реквизиты','site.json']];
  return '<div class="panel"><h3>'+ic('i-content')+'Редактирование контента сайта<span class="hint">правки → пересборка (build.py)</span></h3>'+
   '<table class="tbl"><tr><th>Раздел</th><th>Источник</th><th></th></tr>'+secs.map(function(s){return '<tr><td>'+s[0]+'</td><td><code>'+s[1]+'</code></td><td class="row-actions"><button class="btn btn-ghost" data-act="content-edit" data-name="'+s[0]+'">Редактировать</button><button class="btn btn-primary" data-act="content-pub" data-name="'+s[0]+'">Опубликовать</button></td></tr>';}).join('')+'</table></div>';}
@@ -388,7 +417,7 @@ function moveHoliday(fromKey,toKey,after){
  arr.splice(after?ti+1:ti,0,item);
 }
 function dlJSON(name,obj){var b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
-var RENDER={dash:mDash,tasks:mTasks,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,content:mContent,users:mUsers,reports:mReports,holidays:mHolidays};
+var RENDER={dash:mDash,tasks:mTasks,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,content:mContent,vacancies:mVacancies,users:mUsers,reports:mReports,holidays:mHolidays};
 
 // ---------- shell ----------
 function renderApp(){var R=ROLES[state.role],menu=R.menu; if(menu.indexOf(state.mod)<0)state.mod=menu[0];
@@ -509,6 +538,12 @@ document.addEventListener('click',function(e){
   case 'user-toggle': var ui=+a.getAttribute('data-i'),uu=DATA.users[ui]; if(uu){uu.active=(uu.active===false); logAct(who,(uu.active?'включена':'выключена')+' учётка «'+uu.nm+'»');} go(); toast(uu&&uu.active?'Учётка включена':'Учётка выключена'); break;
   case 'user-add': var ro=['Директор','Менеджер','Бухгалтерия','Рук. лаборатории','Научный сотрудник','Техподдержка','Администратор'].map(function(r){return '<option>'+r+'</option>';}).join(''); openDrawer('<div class="dh"><h3>Новый сотрудник</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>ФИО</label><input id="unm" placeholder="Фамилия И. О."></div><div class="fld"><label>Роль</label><select id="uro">'+ro+'</select></div><div class="fld"><label>Отдел</label><input id="ude" placeholder="Научный отдел"></div><div class="btnrow"><button class="btn btn-primary" data-act="user-create">Создать учётку</button></div></div>'); break;
   case 'user-create': var unm=val('unm').trim(),uro=val('uro'),ude=val('ude').trim(); if(unm){DATA.users.push({nm:unm,role:uro,dept:ude||'—',acc:'—',active:true});logAct(who,'создана учётка «'+unm+'» ('+uro+')');} closeDrawer();go();toast('Учётка создана'); break;
+  case 'vac-add': openVacancyForm(null); break;
+  case 'vac-edit': openVacancyForm(id); break;
+  case 'vac-save': { var vt=val('vti').trim(); if(!vt){toast('Укажите должность');break;} var vo={tag:val('vta').trim()||'Институт',icon:val('vic'),title:vt,type:val('vty'),reqs:val('vrq').split('\n').map(function(s){return s.trim();}).filter(Boolean),published:document.getElementById('vpub').checked}; if(id){var vix=DATA.vacancies.findIndex(function(x){return x.id===id;}); vo.id=id; if(vix>-1)DATA.vacancies[vix]=vo; logAct(who,'изменена вакансия «'+vt+'»');} else {vo.id='V-'+Date.now(); DATA.vacancies.push(vo); logAct(who,'добавлена вакансия «'+vt+'»');} closeDrawer();go();toast('Вакансия сохранена'); break; }
+  case 'vac-toggle': var vtg=DATA.vacancies.find(function(x){return x.id===id;}); if(vtg){vtg.published=(vtg.published===false); logAct(who,(vtg.published?'опубликована':'скрыта')+' вакансия «'+vtg.title+'»');} go(); toast(vtg&&vtg.published?'Вакансия на сайте':'Вакансия скрыта'); break;
+  case 'vac-del': { var vdi=DATA.vacancies.findIndex(function(x){return x.id===id;}); if(vdi<0)break; var vsnap=DATA.vacancies[vdi]; if(!confirm('Удалить вакансию «'+vsnap.title+'»?'))break; DATA.vacancies.splice(vdi,1); logAct(who,'удалена вакансия «'+vsnap.title+'»'); go(); toast._undo=function(){DATA.vacancies.splice(Math.min(vdi,DATA.vacancies.length),0,vsnap);go();toast('Удаление отменено');}; toast('Вакансия удалена','Отменить'); break; }
+  case 'vac-export': dlJSON('vakansii.json',DATA.vacancies); logAct(who,'экспорт vakansii.json'); toast('vakansii.json выгружен — положите в корень сайта'); break;
   case 'kt': window.open('../kt-morfometriya.html','_blank'); break;
   case 'ticket-open': openTicket(id); break;
   case 'ticket-reply': var tkr=DATA.tickets.find(function(x){return x.id===id;}); var tkm=val('tkmsg').trim(); if(tkr&&tkm){tkr.thread=tkr.thread||[];tkr.thread.push({who:who,msg:tkm});if(tkr.status==='new')tkr.status='work';logAct(who,'комментарий к тикету '+id);} openTicket(id); break;
