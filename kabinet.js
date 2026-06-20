@@ -147,6 +147,16 @@
     return '<div class="kb-labinfo"><b>Лаборатория: ' + esc(l.name) + '</b><span>' + esc(l.methods) + "</span></div>";
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  // обратная связь: образец пришёл из управленческой (fromLead) → при утверждении протокола отметить заявку
+  function writeBackToAdmin(x) {
+    try {
+      if (!x.fromLead) return;
+      var AK = "wniikp_admin_v1", raw = localStorage.getItem(AK); if (!raw) return;
+      var d = JSON.parse(raw); if (!d || !d.leads) return;
+      var l = d.leads.filter(function (y) { return y.id === x.fromLead; })[0];
+      if (l) { l.protocolReady = true; l.protocolNo = x.protocolNo || x.id; l.events = l.events || []; l.events.push({ t: "09.06", who: "Лаборатория", msg: "Протокол " + (x.protocolNo || x.id) + " утверждён" }); localStorage.setItem(AK, JSON.stringify(d)); }
+    } catch (e) {}
+  }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function empty(msg) { return '<div class="kb-empty">' + esc(msg) + "</div>"; }
@@ -273,7 +283,7 @@
         if (a === "work") { x.status = "work"; save(); refresh(); toast(x.id + " — в работе"); }
         else if (a === "result") { openResultModal(i); }
         else if (a === "proto") { showProtocol(x); }
-        else if (a === "approve") { x.status = "done"; x.approvedBy = LAB_HEAD; save(); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
+        else if (a === "approve") { x.status = "done"; x.approvedBy = LAB_HEAD; save(); writeBackToAdmin(x); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
         else if (a === "back-new") { x.status = "new"; save(); refresh(); toast(x.id + " возвращён в «Принят»"); }
         else if (a === "back-work") {
           var snapshot = JSON.parse(JSON.stringify(x));

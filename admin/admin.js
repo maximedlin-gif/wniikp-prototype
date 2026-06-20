@@ -50,11 +50,25 @@ var DATA={
   {id:'И-505',sample:'Печенье Пч-4',method:'Перекисное/кислотное число',due:'06.06',who:'Зайцев',status:'done'}
  ],
  tickets:[
-  {id:'T-44',subj:'Не отправляется форма заявки в Safari',from:'Менеджер',status:'work'},
-  {id:'T-43',subj:'Добавить новость о семинаре 26–28 окт',from:'Пресс-служба',status:'new'},
-  {id:'T-41',subj:'Обновить телефон в подвале',from:'Бухгалтерия',status:'done'},
-  {id:'T-40',subj:'Заменить фото на странице «Об институте»',from:'Дирекция',status:'new'}
+  {id:'T-44',subj:'Не отправляется форма заявки в Safari',from:'Менеджер',status:'work',priority:'high',assignee:'Смирнов В.',cat:'Сайт',due:'10.06',thread:[{who:'Менеджер',msg:'В Safari кнопка «Отправить» не реагирует.'}]},
+  {id:'T-43',subj:'Добавить новость о семинаре 26–28 окт',from:'Пресс-служба',status:'new',priority:'normal',assignee:'',cat:'Контент',due:'15.06',thread:[]},
+  {id:'T-41',subj:'Обновить телефон в подвале',from:'Бухгалтерия',status:'done',priority:'low',assignee:'Смирнов В.',cat:'Контент',due:'05.06',thread:[{who:'Смирнов В.',msg:'Телефон обновлён, опубликовано.'}]},
+  {id:'T-40',subj:'Заменить фото на странице «Об институте»',from:'Дирекция',status:'new',priority:'normal',assignee:'',cat:'Контент',due:'12.06',thread:[]}
  ],
+ tasks:[
+  {id:'П-12',title:'Подготовить отчёт по загрузке лаборатории за май',assignee:'Белявская И. Г.',from:'Белецкий С. Л.',due:'12.06',status:'progress',report:''},
+  {id:'П-11',title:'Обновить прайс по услугам срока годности и согласовать с бухгалтерией',assignee:'Орлова Е.',from:'Белецкий С. Л.',due:'10.06',status:'report',report:'Прайс обновлён, согласован с Ивановой Н. Готов к публикации на сайте.'},
+  {id:'П-10',title:'Закрыть тикеты по сайту до конца недели',assignee:'Смирнов В.',from:'Белецкий С. Л.',due:'09.06',status:'done',report:'Тикеты T-41 закрыт, T-44 в работе у разработчика.'},
+  {id:'П-09',title:'Подготовить КП по КТ-морфометрии для трёх фабрик',assignee:'Орлова Е.',from:'Белецкий С. Л.',due:'13.06',status:'new',report:''}
+ ],
+ content:{
+  'Новости':'ВНИИКП провёл отраслевой семинар по контролю качества шоколада и какао-продуктов. В программе — идентификация по ГОСТ 31721, дисперсность, экспертиза фальсификаций.',
+  'Услуги':'Более 100 аккредитованных методик по ГОСТ и МВИ: жиры и окислительная порча, шоколад и какао, мучные и сахаристые изделия, микробиология, сроки годности, КТ-контроль структуры.',
+  'Обучение':'Семинары и повышение квалификации для технологов кондитерских производств: органолептика и дефекты, установление срока годности, маркировка и ТУ.',
+  'Кейсы':'Реальные задачи производств: подбор аналога жира, продление срока годности печенья, разбор рекламации по шоколаду.',
+  'КТ-контроль':'Неразрушающий контроль внутренней структуры изделий по компьютерной томограмме: пористость, размер и распределение пор, плотность — без разрезания образца.',
+  'Контакты/реквизиты':'107023, Москва, ул. Электрозаводская, д. 20, стр. 3. Тел. +7 (495) 963-65-35, conditerprom@mail.ru.'
+ },
  users:[
   {nm:'Белецкий С. Л.',role:'Директор',dept:'Дирекция',acc:'Полный'},
   {nm:'Орлова Е.',role:'Менеджер',dept:'Отдел продаж',acc:'Заявки'},
@@ -78,15 +92,15 @@ function logAct(who,msg){LOG.unshift({t:'07.06 '+nowt(),who:who,msg:msg});}
 function nowt(){var d=10+LOG.length;return (d<10?'0':'')+d+':0'+(LOG.length%6);}
 
 var ROLES={
- director:{label:'Директор',who:'Белецкий С. Л.',menu:['dash','leads','finance','lab','reports','users']},
- manager:{label:'Менеджер',who:'Орлова Е.',menu:['dash','leads']},
- accountant:{label:'Бухгалтерия',who:'Иванова Н.',menu:['dash','finance','leads','reports']},
- lab_head:{label:'Рук. лаборатории',who:'Белявская И. Г.',menu:['dash','lab','reports']},
- scientist:{label:'Научный сотрудник',who:'Зайцев Д.',menu:['lab']},
- support:{label:'Техподдержка',who:'Смирнов В.',menu:['dash','tickets','content','holidays']},
- admin:{label:'Администратор',who:'Администратор',menu:['dash','leads','finance','lab','content','holidays','tickets','users']}
+ director:{label:'Директор',who:'Белецкий С. Л.',menu:['dash','tasks','leads','finance','lab','reports','users']},
+ manager:{label:'Менеджер',who:'Орлова Е.',menu:['dash','tasks','leads']},
+ accountant:{label:'Бухгалтерия',who:'Иванова Н.',menu:['dash','tasks','finance','leads','reports']},
+ lab_head:{label:'Рук. лаборатории',who:'Белявская И. Г.',menu:['dash','tasks','lab','reports']},
+ scientist:{label:'Научный сотрудник',who:'Зайцев Д.',menu:['tasks','lab']},
+ support:{label:'Техподдержка',who:'Смирнов В.',menu:['dash','tasks','tickets','content','holidays']},
+ admin:{label:'Администратор',who:'Администратор',menu:['dash','tasks','leads','finance','lab','content','holidays','tickets','users']}
 };
-var MOD={dash:['i-dash','Дашборд'],leads:['i-leads','Заявки'],finance:['i-fin','Финансы'],
+var MOD={dash:['i-dash','Дашборд'],tasks:['i-report','Поручения'],leads:['i-leads','Заявки'],finance:['i-fin','Финансы'],
  lab:['i-lab','Лаборатория'],content:['i-content','Контент сайта'],tickets:['i-help','Техподдержка'],
  users:['i-users','Пользователи и права'],reports:['i-report','Отчёты'],holidays:['i-cal','Праздники']};
 var STATUS={new:['b-new','Новая'],work:['b-work','В работе'],bill:['b-bill','Счёт выставлен'],paid:['b-paid','Оплачено'],done:['b-done','Выполнено']};
@@ -96,10 +110,10 @@ var holIconData=null; // data-URL загруженной своей иконки
 
 // ---------- сохранение демо-данных (localStorage) ----------
 var ADMKEY='wniikp_admin_v1';
-var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays}));
-function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,log:LOG,uType:state.uType}));}catch(e){}}
-function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
-function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
+var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content}));
+function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,log:LOG,uType:state.uType}));}catch(e){}}
+function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.tasks)DATA.tasks=s.tasks; if(s.content)DATA.content=s.content; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
+function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));DATA.tasks=JSON.parse(JSON.stringify(DEFAULTS.tasks));DATA.content=JSON.parse(JSON.stringify(DEFAULTS.content||{}));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
 loadData();
 
 // ---------- НДС и тип учреждения ----------
@@ -255,6 +269,32 @@ function mLab(role){var head=(role==='scientist')?'<span class="access-pill">д�
 function mTickets(role){var tbl=DATA.tickets.length?('<table class="tbl"><tr><th>№</th><th>Тема</th><th>От кого</th><th>Статус</th><th></th></tr>'+
  DATA.tickets.map(function(t){return '<tr><td>'+t.id+'</td><td>'+esc(t.subj)+'</td><td>'+esc(t.from)+'</td><td>'+sb(t.status)+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="ticket-open" data-id="'+t.id+'">Открыть</button>'+(t.status!=='done'?'<button class="btn btn-primary" data-act="ticket-close" data-id="'+t.id+'">Закрыть</button>':'')+'</td></tr>';}).join('')+'</table>'):'<div class="empty">Открытых тикетов нет.</div>';
  return '<div class="panel"><h3>'+ic('i-help')+'Тикеты техподдержки</h3>'+tbl+'</div>';}
+function taskBadge(st){var m={new:['b-new','Новое'],progress:['b-work','В работе'],report:['b-bill','Отчёт сдан'],done:['b-paid','Принято']}[st]||['b-new',st]; return '<span class="badge '+m[0]+'">'+m[1]+'</span>';}
+function mTasks(role){var me=ROLES[role].who, boss=(role==='director'||role==='admin');
+ var list=boss?DATA.tasks:DATA.tasks.filter(function(t){return t.assignee===me;});
+ var head=boss
+   ? '<div class="panel" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b>'+ic('i-report')+' Поручения сотрудникам</b><span class="muted">ставьте задачи и принимайте отчёты</span><button class="btn btn-primary" style="margin-left:auto" data-act="task-new">+ Новое поручение</button></div>'
+   : '<div class="panel" style="display:flex;align-items:center;gap:12px"><b>'+ic('i-report')+' Мои поручения</b><span class="muted">от руководства, со сроками</span></div>';
+ if(!list.length) return head+'<div class="empty">'+(boss?'Поручений нет. Создайте первое.':'Активных поручений у вас нет.')+'</div>';
+ var rows=list.map(function(t){var ov=labOverdue({due:t.due,status:t.status});
+   var act='';
+   if(boss){ if(t.status==='report')act+='<button class="btn btn-primary" data-act="task-accept" data-id="'+t.id+'">Принять</button><button class="btn btn-ghost" data-act="task-return" data-id="'+t.id+'">Вернуть</button>'; act+='<button class="btn btn-ghost" data-act="task-open" data-id="'+t.id+'">Открыть</button>'; }
+   else { if(t.status==='new'||t.status==='progress')act+='<button class="btn btn-primary" data-act="task-report" data-id="'+t.id+'">Сдать отчёт</button>'; act+='<button class="btn btn-ghost" data-act="task-open" data-id="'+t.id+'">Открыть</button>'; }
+   return '<tr'+(ov?' class="risk-row"':'')+'><td><b>'+t.id+'</b></td><td>'+esc(t.title)+(t.report?'<div class="kb-sub">отчёт: '+esc(t.report.slice(0,64))+'…</div>':'')+'</td><td>'+esc(boss?t.assignee:t.from)+'</td><td>'+t.due+(ov?' <span class="lead-age hot">просрочено</span>':'')+'</td><td>'+taskBadge(t.status)+'</td><td class="row-actions">'+act+'</td></tr>';
+ }).join('');
+ return head+'<div class="panel"><table class="tbl"><tr><th>№</th><th>Поручение</th><th>'+(boss?'Исполнитель':'От кого')+'</th><th>Срок</th><th>Статус</th><th></th></tr>'+rows+'</table></div>';
+}
+function openTask(id){var t=DATA.tasks.find(function(x){return x.id===id;}); if(!t)return; var boss=(state.role==='director'||state.role==='admin'), me=ROLES[state.role].who;
+ var acts='';
+ if(boss){ if(t.status==='report')acts='<button class="btn btn-primary" data-act="task-accept" data-id="'+id+'">Принять отчёт</button><button class="btn btn-ghost" data-act="task-return" data-id="'+id+'">Вернуть на доработку</button>'; else acts='<span class="muted" style="font-size:13px">'+(t.status==='done'?'Поручение закрыто':'Ожидаем отчёт исполнителя')+'</span>'; }
+ else if(t.assignee===me && (t.status==='new'||t.status==='progress')){ acts='<button class="btn btn-primary" data-act="task-report" data-id="'+id+'">Сдать отчёт</button>'; }
+ var rep=t.report?'<div class="sod" style="margin-top:14px"><div class="sod-t">'+ic('i-report')+' Отчёт исполнителя</div><div class="note">'+esc(t.report)+'</div></div>':'<div class="muted" style="font-size:13px;margin-top:10px">Отчёт ещё не сдан.</div>';
+ openDrawer('<div class="dh"><div><h3>Поручение '+t.id+'</h3><div class="muted" style="font-size:13px">от '+esc(t.from)+' · срок '+t.due+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><p style="font-size:15px;font-weight:600;margin:0 0 12px">'+esc(t.title)+'</p><div class="kv"><b>Исполнитель</b><span>'+esc(t.assignee)+'</span></div><div class="kv"><b>Статус</b><span>'+taskBadge(t.status)+'</span></div>'+rep+'<div class="btnrow">'+acts+'</div></div>');
+}
+function openContentEditor(name){var txt=(DATA.content&&DATA.content[name])||''; openDrawer('<div class="dh"><div><h3>Редактор: '+esc(name)+'</h3><div class="muted" style="font-size:13px">правки → предпросмотр → публикация</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Текст раздела</label><textarea id="cedit" rows="7" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit">'+esc(txt)+'</textarea></div><div class="fld"><label>Предпросмотр</label><div id="cprev" class="content-prev">'+esc(txt)+'</div></div><div class="btnrow"><button class="btn btn-primary" data-act="content-save" data-name="'+esc(name)+'">Опубликовать</button><button class="btn btn-ghost" data-act="close">Отмена</button></div></div>');}
+function taskReportForm(id){var t=DATA.tasks.find(function(x){return x.id===id;}); if(!t)return;
+ openDrawer('<div class="dh"><div><h3>Отчёт по '+id+'</h3><div class="muted" style="font-size:13px">'+esc(t.title)+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Текст отчёта</label><textarea id="trep" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit">'+esc(t.report||'')+'</textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="task-report-save" data-id="'+id+'">Отправить отчёт</button><button class="btn btn-ghost" data-act="task-open" data-id="'+id+'">Назад</button></div></div>');
+}
 function mContent(){var secs=[['Новости','novosti.html'],['Услуги','uslugi.html'],['Обучение','obuchenie.html'],['Кейсы','keysy.html'],['КТ-контроль','kt-morfometriya.html'],['Контакты/реквизиты','site.json']];
  return '<div class="panel"><h3>'+ic('i-content')+'Редактирование контента сайта<span class="hint">правки → пересборка (build.py)</span></h3>'+
   '<table class="tbl"><tr><th>Раздел</th><th>Источник</th><th></th></tr>'+secs.map(function(s){return '<tr><td>'+s[0]+'</td><td><code>'+s[1]+'</code></td><td class="row-actions"><button class="btn btn-ghost" data-act="content-edit" data-name="'+s[0]+'">Редактировать</button><button class="btn btn-primary" data-act="content-pub" data-name="'+s[0]+'">Опубликовать</button></td></tr>';}).join('')+'</table></div>';}
@@ -324,7 +364,7 @@ function moveHoliday(fromKey,toKey,after){
  arr.splice(after?ti+1:ti,0,item);
 }
 function dlJSON(name,obj){var b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
-var RENDER={dash:mDash,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,content:mContent,users:mUsers,reports:mReports,holidays:mHolidays};
+var RENDER={dash:mDash,tasks:mTasks,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,content:mContent,users:mUsers,reports:mReports,holidays:mHolidays};
 
 // ---------- shell ----------
 function renderApp(){var R=ROLES[state.role],menu=R.menu; if(menu.indexOf(state.mod)<0)state.mod=menu[0];
@@ -368,8 +408,9 @@ function pushToKabinet(l){
  }catch(e){return false;}
 }
 function orderFlow(l){
- var stages=[['Заявка',true],['Счёт',['bill','paid','done'].indexOf(l.status)>-1],['В лаборатории',!!l.toLab],['Оплата',['paid','done'].indexOf(l.status)>-1],['Акт',!!l.act]];
+ var stages=[['Заявка',true],['Счёт',['bill','paid','done'].indexOf(l.status)>-1],['В лаборатории',!!l.toLab],['Протокол',!!l.protocolReady],['Оплата',['paid','done'].indexOf(l.status)>-1],['Акт',!!l.act]];
  var link=l.kabinetSampleId?'<a class="of-link" href="../kabinet.html" target="_blank">Открыть образец '+esc(l.kabinetSampleId)+' в кабинете лаборатории →</a>':'';
+ if(l.protocolReady)link='<div class="of-ready">'+ic('i-check')+' Протокол '+esc(l.protocolNo||'')+' готов в лаборатории</div>'+link;
  return '<div class="of-wrap"><div class="of-t">Сквозной поток заказа</div><div class="order-flow">'+stages.map(function(s,i){return (i?'<span class="of-arrow">→</span>':'')+'<span class="of-step'+(s[1]?' done':'')+'">'+esc(s[0])+'</span>';}).join('')+'</div>'+link+'</div>';
 }
 function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l)return;
@@ -429,11 +470,19 @@ document.addEventListener('click',function(e){
   case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Телефон</label><input id="nlp" placeholder="+7 (___) ___-__-__"></div><div class="fld"><label>E-mail</label><input id="nle" type="email" placeholder="client@example.ru"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
   case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0,ph=(document.getElementById('nlp')||{}).value,em=(document.getElementById('nle')||{}).value; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,phone:ph,email:em,service:s||'—',amount:am,status:'new',mgr:who,date:'09.06',notes:[],events:[],seen:true});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
   case 'lab-done': var t=DATA.lab.find(function(x){return x.id===id;}); if(t){t.status='done';logAct(who,'загружен протокол '+id);} go();toast('Протокол загружен, задание выполнено'); break;
+  case 'task-new': var uopts=DATA.users.filter(function(u){return u.nm!=='Белецкий С. Л.';}).map(function(u){return '<option>'+esc(u.nm)+'</option>';}).join(''); openDrawer('<div class="dh"><h3>Новое поручение</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Исполнитель</label><select id="tas">'+uopts+'</select></div><div class="fld"><label>Поручение</label><input id="tti" placeholder="Что нужно сделать"></div><div class="fld"><label>Срок (дд.мм)</label><input id="tdu" placeholder="15.06"></div><div class="btnrow"><button class="btn btn-primary" data-act="task-create">Создать поручение</button></div></div>'); break;
+  case 'task-create': var ta=val('tas'),tt=val('tti').trim(),td=val('tdu').trim()||'—'; if(tt){var ntid='П-'+(13+DATA.tasks.length);DATA.tasks.unshift({id:ntid,title:tt,assignee:ta,from:who,due:td,status:'new',report:''});logAct(who,'создано поручение '+ntid+' для '+ta);} closeDrawer();go();toast('Поручение создано'); break;
+  case 'task-open': openTask(id); break;
+  case 'task-report': taskReportForm(id); break;
+  case 'task-report-save': var tr=DATA.tasks.find(function(x){return x.id===id;}); var rv=val('trep').trim(); if(tr&&rv){tr.report=rv;tr.status='report';logAct(who,'сдан отчёт по поручению '+id);} closeDrawer();go();toast('Отчёт отправлен руководителю'); break;
+  case 'task-accept': var ta2=DATA.tasks.find(function(x){return x.id===id;}); if(ta2){ta2.status='done';logAct(who,'принят отчёт по поручению '+id);} closeDrawer();go();toast('Отчёт принят, поручение закрыто'); break;
+  case 'task-return': var ta3=DATA.tasks.find(function(x){return x.id===id;}); if(ta3){ta3.status='progress';logAct(who,'поручение '+id+' возвращено на доработку');} closeDrawer();go();toast('Возвращено на доработку'); break;
   case 'kt': window.open('../kt-morfometriya.html','_blank'); break;
   case 'ticket-open': var tk=DATA.tickets.find(function(x){return x.id===id;}); openDrawer('<div class="dh"><div><h3>Тикет '+id+'</h3><div class="muted" style="font-size:13px">от '+tk.from+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><p>'+esc(tk.subj)+'</p><div class="fld"><label>Комментарий</label><textarea rows="4" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="ticket-close" data-id="'+id+'">Решить и закрыть</button></div></div>'); break;
   case 'ticket-close': var tk2=DATA.tickets.find(function(x){return x.id===id;}); if(tk2){tk2.status='done';logAct(who,'закрыт тикет '+id);} closeDrawer();go();toast('Тикет закрыт'); break;
   case 'content-pub': logAct(who,'опубликован раздел «'+a.getAttribute('data-name')+'»');toast('Опубликовано: «'+a.getAttribute('data-name')+'» (пересборка build.py)'); break;
-  case 'content-edit': toast('Редактор раздела «'+a.getAttribute('data-name')+'» — в боевой версии'); break;
+  case 'content-edit': openContentEditor(a.getAttribute('data-name')); break;
+  case 'content-save': var cn=a.getAttribute('data-name'),cv=val('cedit'); DATA.content=DATA.content||{}; DATA.content[cn]=cv; logAct(who,'обновлён и опубликован раздел «'+cn+'»'); closeDrawer();go();toast('Опубликовано: «'+cn+'» (в боевой версии — пересборка build.py)'); break;
   case 'fin-report': state.finView='report';go(); break;
   case 'fin-list': state.finView='list';go(); break;
   case 'csv-invoices': csvInvoices();logAct(who,'выгрузка реестра счетов (CSV)');toast('Счета выгружены в CSV'); break;
@@ -469,6 +518,7 @@ document.addEventListener('change',function(e){
 });
 document.addEventListener('input',function(e){
  if(document.getElementById('holPrev')) renderHolPreview();
+ if(e.target.id==='cedit'){var cp=document.getElementById('cprev'); if(cp)cp.textContent=e.target.value;}
  if(e.target.id==='globalSearch'){var q=e.target.value.trim().toLowerCase();
   document.querySelectorAll('.content .lead').forEach(function(el){el.style.display=(!q||el.textContent.toLowerCase().indexOf(q)>-1)?'':'none';});
   document.querySelectorAll('.content table.tbl tr').forEach(function(tr){ if(tr.querySelector('th'))return; tr.style.display=(!q||tr.textContent.toLowerCase().indexOf(q)>-1)?'':'none';});

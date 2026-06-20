@@ -94,6 +94,10 @@ button{font-family:inherit;cursor:pointer}
 .of-step.done{background:var(--good-soft);color:var(--good)}
 .of-arrow{color:#aab4be;font-size:12px}
 .of-link{display:inline-block;margin-top:11px;font-weight:700;color:var(--red);font-size:13px}
+.of-ready{display:flex;align-items:center;gap:7px;margin-top:10px;color:var(--good);font-weight:700;font-size:13px}
+.of-ready .ic{width:16px;height:16px}
+/* контент-редактор */
+.content-prev{background:#faf8f6;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;color:var(--ink);line-height:1.5;min-height:40px;white-space:pre-wrap}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .kpi .lab{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
 .kpi .val{font-size:27px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
