@@ -2,7 +2,7 @@
    календарь приборов, дашборд, вычисляемый протокол испытаний. Состояние — localStorage. Прототип. */
 (function () {
   "use strict";
-  var KEY = "wniikp_kabinet_v4";
+  var KEY = "wniikp_kabinet_v5";
   var LABS = [
     { id: "all", name: "Все лаборатории", methods: "сводно по всем лабораториям института" },
     { id: "micro", name: "Микробиология, гигиена и санитария", methods: "КМАФАнМ · дрожжи и плесени · БГКП · патогенные" },
@@ -81,24 +81,38 @@
     return t.val + (t.unit ? " " + t.unit : "") + (t.u ? " ± " + t.u : "");
   }
 
+  /* срок выполнения и просрочка. Демо-«сегодня» — 10 июня 2026. Формат сравнения: месяц*100+день. */
+  var TODAY_KB = 610;
+  function dmNum(s) { var m = String(s || "").match(/(\d{1,2})\.(\d{1,2})/); return m ? (+m[2]) * 100 + (+m[1]) : null; }
+  function dueFromIso(iso) { var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] : ""; }
+  function dueState(x) {
+    if (!x.due || x.status === "done") return null;
+    var d = dmNum(x.due); if (d == null) return null;
+    if (d < TODAY_KB) return { cls: "over", txt: "просрочено" };
+    if (d === TODAY_KB) return { cls: "soon", txt: "срок сегодня" };
+    if (d === TODAY_KB + 1) return { cls: "soon", txt: "срок завтра" };
+    return { cls: "ok", txt: "до " + x.due };
+  }
+  function duePill(x) { var s = dueState(x); return s ? ' <span class="kb-due ' + s.cls + '">' + esc(s.txt) + "</span>" : ""; }
+
   var SEED = {
     samples: [
-      { id: "К-101", lab: "micro", date: "08.06", product: "Печенье сахарное", client: "ООО «Сластёна»", tests: ["КМАФАнМ (ГОСТ 33536-2015)", "Дрожжи и плесени (ГОСТ 10444.12-2013)", "БГКП (ГОСТ 31747-2012)"], status: "work" },
-      { id: "К-102", lab: "choc", date: "08.06", product: "Шоколад молочный", client: "Фабрика «Заря»", tests: ["Идентификационные признаки шоколада", "Массовая доля масла какао (МВИ 45-…)", "Степень измельчения (ГОСТ Р 54052-2010)"], status: "new" },
+      { id: "К-101", lab: "micro", date: "08.06", due: "09.06", product: "Печенье сахарное", client: "ООО «Сластёна»", tests: ["КМАФАнМ (ГОСТ 33536-2015)", "Дрожжи и плесени (ГОСТ 10444.12-2013)", "БГКП (ГОСТ 31747-2012)"], status: "work" },
+      { id: "К-102", lab: "choc", date: "08.06", due: "12.06", product: "Шоколад молочный", client: "Фабрика «Заря»", tests: ["Идентификационные признаки шоколада", "Массовая доля масла какао (МВИ 45-…)", "Степень измельчения (ГОСТ Р 54052-2010)"], status: "new" },
       { id: "К-103", lab: "choc", date: "07.06", product: "Мармелад желейный", client: "ИП Орлова",
         tests: [
           { ind: "Массовая доля редуцирующих веществ", nd: "ГОСТ 5903-89", val: 18.5, unit: "%", lim: 23, op: "<=", u: 1.2 },
           { ind: "Массовая доля фруктового сырья", nd: "МВИ 39-…", val: 16.4, unit: "%", lim: 15, op: ">=", u: 1.0 },
           { ind: "Прочность студня", nd: "ГОСТ 26185-84", val: 14.2, unit: "Н", lim: 12, op: ">=", u: 0.8 }
         ], status: "done" },
-      { id: "К-104", lab: "chrom", date: "07.06", product: "Пряники заварные", client: "ООО «Тула-Хлеб»", tests: ["Жирнокислотный состав (ГОСТ 30623-2018)", "Перекисное число (ГОСТ 26593-85)", "Кислотное число (ГОСТ 31933-2012)"], status: "work" },
+      { id: "К-104", lab: "chrom", date: "07.06", due: "10.06", product: "Пряники заварные", client: "ООО «Тула-Хлеб»", tests: ["Жирнокислотный состав (ГОСТ 30623-2018)", "Перекисное число (ГОСТ 26593-85)", "Кислотное число (ГОСТ 31933-2012)"], status: "work" },
       { id: "К-105", lab: "physchem", date: "06.06", product: "Конфеты глазированные", client: "Кондитер «Победа»",
         tests: [
           { ind: "КТ-морфометрия пористости", nd: "методика ВНИИКП", val: 27.0, unit: "%", lim: 30, op: "<=", u: 1.5 },
           { ind: "Массовая доля влаги", nd: "ГОСТ 5900-2014", val: 7.7, unit: "%", lim: 8.0, op: "<=", u: 0.4 },
           { ind: "Активность воды", nd: "ГОСТ ISO 21807-2015", val: 0.55, unit: "a_w", lim: 0.60, op: "<=", u: 0.02 }
         ], status: "done" },
-      { id: "К-106", lab: "flour", date: "09.06", product: "Вафли", client: "ООО «Хрустик»", tests: ["Массовая доля общего жира (ГОСТ 31902-2012)", "Намокаемость (ГОСТ 10114)", "Массовая доля вафельной крошки (ГОСТ 5897-90)"], status: "new" }
+      { id: "К-106", lab: "flour", date: "09.06", due: "13.06", product: "Вафли", client: "ООО «Хрустик»", tests: ["Массовая доля общего жира (ГОСТ 31902-2012)", "Намокаемость (ГОСТ 10114)", "Массовая доля вафельной крошки (ГОСТ 5897-90)"], status: "new" }
     ],
     instruments: JSON.parse(JSON.stringify(DEFAULT_INSTR)),
     bookings: { kt: { 0: "К-105", 2: "К-101" }, nmr: { 1: "К-104" }, chrom: { 0: "К-104", 3: "К-102" }, struct: { 2: "К-103" } }
@@ -160,6 +174,7 @@
     var work = s.filter(function (x) { return x.status === "work"; }).length;
     var done = s.filter(function (x) { return x.status === "done"; }).length;
     var nw = s.filter(function (x) { return x.status === "new"; }).length;
+    var over = s.filter(function (x) { var d = dueState(x); return d && d.cls === "over"; }).length;
     var avail = state.instruments.filter(function (i) { return instrAvail(i).ok; });
     var slots = avail.length * DAYS.length;
     var used = 0;
@@ -176,7 +191,7 @@
     var recent = total ? '<table class="kb-table"><tbody>' + recentRows + "</tbody></table>" : empty("По выбранной лаборатории образцов пока нет.");
     $("kb-dash").innerHTML =
       '<h2>Дашборд</h2>' + labInfo() +
-      '<div class="kb-kpis">' + card(total, "Образцов всего") + card(nw, "Новые", "amber") + card(work, "В работе", "blue") + card(done, "Готово", "green") + card(load + "%", "Загрузка приборов") + "</div>" +
+      '<div class="kb-kpis">' + card(total, "Образцов всего") + card(nw, "Новые", "amber") + card(work, "В работе", "blue") + card(done, "Готово", "green") + card(over, "Просрочено", "red") + card(load + "%", "Загрузка приборов") + "</div>" +
       planBanner +
       '<div class="kb-grid2">' +
       '<div class="kb-box"><h3>Загрузка приборов (неделя)</h3>' + instrBars() + "</div>" +
@@ -209,10 +224,11 @@
       if (x.status === "work") { acts += '<button class="kb-mini" data-act="result" data-i="' + idx + '">→ Внести результат</button>'; acts += '<button class="kb-mini ghost" data-act="back-new" data-i="' + idx + '">↩ вернуть</button>'; }
       if (x.status === "done") { acts += '<button class="kb-mini primary" data-act="proto" data-i="' + idx + '">Протокол</button>'; acts += '<button class="kb-mini ghost" data-act="back-work" data-i="' + idx + '">↩ в работу</button>'; }
       var tests = (x.tests || []).map(function (t) { return "<li>" + esc(testName(t)) + "</li>"; }).join("");
-      return '<tr><td><b>' + esc(x.id) + '</b><div class="kb-sub">' + esc(x.date) + '</div></td>' +
+      var ds = dueState(x);
+      return '<tr' + (ds && ds.cls === "over" ? ' class="kb-over"' : "") + '><td><b>' + esc(x.id) + '</b><div class="kb-sub">' + esc(x.date) + (x.due ? " · срок " + esc(x.due) : "") + '</div></td>' +
         "<td>" + esc(x.product) + '<div class="kb-sub">' + esc(x.client) + "</div></td>" +
         '<td><ul class="kb-tests">' + tests + "</ul></td>" +
-        "<td>" + badge(x.status) + resultPill(x) + "</td><td>" + acts + "</td></tr>";
+        "<td>" + badge(x.status) + resultPill(x) + duePill(x) + "</td><td>" + acts + "</td></tr>";
     }).join("");
     var table = visible.length
       ? '<table class="kb-table"><thead><tr><th>Образец</th><th>Продукт / заказчик</th><th>Испытания</th><th>Статус</th><th></th></tr></thead><tbody>' + rows + "</tbody></table>"
@@ -224,11 +240,12 @@
       '<input id="js-prod" placeholder="Продукт (напр. Печенье сахарное)">' +
       '<input id="js-cli" placeholder="Заказчик">' +
       '<input id="js-tests" placeholder="Испытания через запятую">' +
+      '<input id="js-due" type="date" title="Срок выполнения" style="flex:0 0 160px">' +
       '<button class="kb-mini primary" id="js-add">Принять</button></div></div>' + table;
     $("js-add").addEventListener("click", function () {
       var prod = $("js-prod").value.trim(); if (!prod) { toast("Укажите продукт"); return; }
       var n = state.samples.length + 101;
-      state.samples.push({ id: "К-" + n, lab: (curLab() === "all" ? "physchem" : curLab()), date: "—", product: prod, client: $("js-cli").value.trim() || "—", tests: ($("js-tests").value.trim() ? $("js-tests").value.split(",").map(function (t) { return t.trim(); }) : ["—"]), status: "new" });
+      state.samples.push({ id: "К-" + n, lab: (curLab() === "all" ? "physchem" : curLab()), date: "—", due: dueFromIso($("js-due").value), product: prod, client: $("js-cli").value.trim() || "—", tests: ($("js-tests").value.trim() ? $("js-tests").value.split(",").map(function (t) { return t.trim(); }) : ["—"]), status: "new" });
       save(); renderJournal();
       toast("Образец К-" + n + " принят");
     });

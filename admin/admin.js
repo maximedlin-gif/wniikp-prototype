@@ -33,14 +33,14 @@ var DATA={
  revMonths:[['Янв',1180],['Фев',1320],['Мар',1410],['Апр',1270],['Май',1560],['Июн',1840]],
  revServices:[['Сроки годности',640],['Шоколад/какао',420],['КТ-морфометрия',360],['Обучение',280],['Микробиология',140]],
  leads:[
-  {id:'З-238',client:'ООО «Пряничный двор»',service:'Срок годности (пряники)',amount:48000,status:'new',mgr:'Орлова',date:'07.06',notes:[]},
-  {id:'З-237',client:'ИП Сидорова (глазурь)',service:'Подбор аналога жира',amount:62000,status:'new',mgr:'Орлова',date:'06.06',notes:[]},
-  {id:'З-235',client:'АО «Сластёна»',service:'КТ-морфометрия бисквита',amount:90000,status:'work',mgr:'Орлова',date:'05.06',notes:[]},
-  {id:'З-233',client:'ООО «Кейк-Хаус»',service:'Идентификация шоколада',amount:36000,status:'work',mgr:'Петров',date:'04.06',notes:[]},
-  {id:'З-230',client:'Кондитерская «Мишка»',service:'Обучение: органолептика',amount:72000,status:'bill',mgr:'Петров',date:'02.06',notes:[]},
-  {id:'З-228',client:'ООО «ВкусПром»',service:'Маркировка + ТУ',amount:55000,status:'paid',mgr:'Орлова',date:'31.05',notes:[],paidDate:'02.06'},
-  {id:'З-224',client:'Фабрика «Заря»',service:'Микробиология партии',amount:28000,status:'paid',mgr:'Петров',date:'28.05',notes:[],paidDate:'30.05'},
-  {id:'З-219',client:'ООО «Десерт+»',service:'Срок годности (печенье)',amount:45000,status:'done',mgr:'Орлова',date:'22.05',notes:[],paidDate:'24.05',act:true}
+  {id:'З-238',client:'ООО «Пряничный двор»',phone:'+7 (920) 555-12-30',email:'zakaz@pryanik-dvor.ru',service:'Срок годности (пряники)',amount:48000,status:'new',mgr:'Орлова',date:'07.06',notes:[],events:[]},
+  {id:'З-237',client:'ИП Сидорова (глазурь)',phone:'+7 (905) 441-88-02',email:'sidorova.glaze@mail.ru',service:'Подбор аналога жира',amount:62000,status:'new',mgr:'Орлова',date:'06.06',notes:[],events:[]},
+  {id:'З-235',client:'АО «Сластёна»',phone:'+7 (495) 770-33-18',email:'lab@slastena.ru',service:'КТ-морфометрия бисквита',amount:90000,status:'work',mgr:'Орлова',date:'05.06',notes:[],events:[]},
+  {id:'З-233',client:'ООО «Кейк-Хаус»',phone:'+7 (812) 244-90-55',email:'info@cakehouse.ru',service:'Идентификация шоколада',amount:36000,status:'work',mgr:'Петров',date:'04.06',notes:[],events:[]},
+  {id:'З-230',client:'Кондитерская «Мишка»',phone:'+7 (903) 128-44-71',email:'mishka.konditer@yandex.ru',service:'Обучение: органолептика',amount:72000,status:'bill',mgr:'Петров',date:'02.06',billDate:'02.06',dueDate:'07.06',notes:[],events:[]},
+  {id:'З-228',client:'ООО «ВкусПром»',phone:'+7 (846) 339-21-04',email:'quality@vkusprom.ru',service:'Маркировка + ТУ',amount:55000,status:'paid',mgr:'Орлова',date:'31.05',billDate:'28.05',dueDate:'04.06',notes:[],events:[],paidDate:'02.06'},
+  {id:'З-224',client:'Фабрика «Заря»',phone:'+7 (4812) 65-43-21',email:'zarya.fabrika@mail.ru',service:'Микробиология партии',amount:28000,status:'paid',mgr:'Петров',date:'28.05',billDate:'25.05',dueDate:'01.06',notes:[],events:[],paidDate:'30.05'},
+  {id:'З-219',client:'ООО «Десерт+»',phone:'+7 (343) 287-66-19',email:'order@desertplus.ru',service:'Срок годности (печенье)',amount:45000,status:'done',mgr:'Орлова',date:'22.05',billDate:'20.05',dueDate:'27.05',notes:[],events:[],paidDate:'24.05',act:true}
  ],
  lab:[
   {id:'И-512',sample:'Бисквит К-12',method:'КТ-морфометрия',due:'10.06',who:'Зайцев',status:'work'},
@@ -127,6 +127,14 @@ function plural(n,one,few,many){var m=n%100,d=n%10; if(m>10&&m<20)return many; i
 function paidLeads(){return DATA.leads.filter(function(l){return l.status==='paid'||l.status==='done';});}
 function factRevenue(){return sum(paidLeads().map(function(l){return l.amount;}))+1610000;}
 
+// сроки/просрочки. Демо-«сегодня» — 9 июня (день года ≈ (мес-1)*30+день)
+var ADMIN_TODAY=(6-1)*30+9;
+function adoy(s){var m=String(s||'').match(/(\d{1,2})\.(\d{1,2})/);return m?(+m[2]-1)*30+(+m[1]):null;}
+function leadAge(l){var d=adoy(l.date);return d==null?null:Math.max(0,ADMIN_TODAY-d);}
+function leadHot(l){return (l.status==='new'||l.status==='work')&&leadAge(l)>2;}
+function agePill(l){var a=leadAge(l); if(a==null||l.status!=='new'&&l.status!=='work')return ''; return '<div class="lead-age'+(a>2?' hot':'')+'">'+(a>2?'⏱ ':'')+a+' '+plural(a,'день','дня','дней')+(a>2?' без ответа':'')+'</div>';}
+function labOverdue(t){var d=adoy(t.due);return t.status!=='done'&&d!=null&&d<ADMIN_TODAY;}
+
 function kpi(lab,val,chg,icon){var c=chg===undefined?'':'<div class="chg '+(chg>=0?'up':'down')+'">'+(chg>=0?'▲ +':'▼ ')+chg+'% к прошлому мес.</div>';
  return '<div class="kpi"><div class="lab">'+ic(icon)+lab+'</div><div class="val">'+val+'</div>'+c+'</div>';}
 
@@ -137,7 +145,8 @@ function mDash(role){
  if(role==='support') return mTickets(role);
  if(role==='manager'){
   var mine=DATA.leads.filter(function(l){return l.mgr==='Орлова';});
-  return '<div class="kpis">'+kpi('Мои заявки',mine.length,undefined,'i-leads')+kpi('В работе',mine.filter(function(l){return l.status==='work';}).length,undefined,'i-leads')+kpi('Ждут счёта',DATA.leads.filter(function(l){return l.status==='bill';}).length,undefined,'i-fin')+kpi('Средний чек',money(54000),undefined,'i-report')+'</div>'+leadsKanban(true);
+  var hot=DATA.leads.filter(leadHot).length;
+  return '<div class="kpis">'+kpi('Мои заявки',mine.length,undefined,'i-leads')+kpi('В работе',mine.filter(function(l){return l.status==='work';}).length,undefined,'i-leads')+kpi('Ждут счёта',DATA.leads.filter(function(l){return l.status==='bill';}).length,undefined,'i-fin')+'<div class="kpi'+(hot?' kpi-hot':'')+'"><div class="lab">'+ic('i-leads')+'Горящие (нет ответа >2 дн.)</div><div class="val">'+hot+'</div></div>'+'</div>'+leadsKanban(true);
  }
  return '<div class="kpis">'+kpi('Выручка за месяц',money(1840000),12,'i-fin')+kpi('Заявок за месяц',DATA.leads.length,8,'i-leads')+kpi('Конверсия в оплату','31%',4,'i-report')+kpi('Загрузка лабораторий','78%',undefined,'i-lab')+'</div>'+
   '<div class="grid2"><div class="panel"><h3>'+ic('i-fin')+'Выручка по месяцам, тыс. ₽</h3>'+lineChart(DATA.revMonths)+'</div><div class="panel"><h3>'+ic('i-report')+'Выручка по услугам, тыс. ₽</h3>'+barList(DATA.revServices)+'</div></div>'+
@@ -148,7 +157,7 @@ function leadsTable(rows){if(!rows.length)return '<div class="empty">Заяво�
  rows.map(function(l){return '<tr data-lead="'+l.id+'" tabindex="0"><td>'+l.id+'</td><td>'+esc(l.client)+'</td><td>'+esc(l.service)+'</td><td>'+esc(l.mgr)+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table>';}
 function leadsKanban(editable){var cols=['new','work','bill','paid','done'];
  return '<div class="kanban">'+cols.map(function(c){var it=DATA.leads.filter(function(l){return l.status===c;});
-  var cards=it.length?it.map(function(l){return '<div class="lead" data-lead="'+l.id+'" tabindex="0" role="button" aria-label="Заявка '+l.id+', '+esc(l.client)+'"><div class="cl">'+esc(l.client)+'</div><div class="sv">'+esc(l.service)+'</div><div class="am">'+money(l.amount)+'</div></div>';}).join(''):'<div class="kempty">пусто</div>';
+  var cards=it.length?it.map(function(l){return '<div class="lead'+(leadHot(l)?' hot':'')+'" data-lead="'+l.id+'" tabindex="0" role="button" aria-label="Заявка '+l.id+', '+esc(l.client)+'"><div class="cl">'+esc(l.client)+'</div><div class="sv">'+esc(l.service)+'</div><div class="am">'+money(l.amount)+'</div>'+agePill(l)+'</div>';}).join(''):'<div class="kempty">пусто</div>';
   return '<div class="kcol"><h4>'+STATUS[c][1]+'<span>'+it.length+'</span></h4>'+cards+'</div>';}).join('')+'</div>';}
 function mLeads(role){var ro=(role==='director');
  return '<div class="panel" style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><b>Воронка продаж</b><span class="muted">кликните заявку → действия</span>'+(ro?'<span class="hint">режим просмотра</span>':'<button class="btn btn-primary" style="margin-left:auto" data-act="new-lead">+ Новая заявка</button>')+'</div>'+leadsKanban(!ro);}
@@ -211,9 +220,9 @@ function ctrlCard(t,sub,val,st){return '<div class="ctrl-card '+st+'"><div class
 function mLab(role){var head=(role==='scientist')?'<span class="access-pill">доступ: только свои задания</span>':'<span class="access-pill">доступ: вся лаборатория</span>';
  var rows=DATA.lab; if(role==='scientist') rows=rows.filter(function(t){return t.who==='Зайцев';});
  var tbl=rows.length?('<table class="tbl"><tr><th>№</th><th>Образец</th><th>Метод</th><th>Срок</th><th>Исполнитель</th><th>Статус</th><th></th></tr>'+
-  rows.map(function(t){var act=t.method.indexOf('КТ')>-1?'<button class="btn btn-ghost" data-act="kt">'+ic('i-scan')+'КТ-модуль</button>':'';
+  rows.map(function(t){var ov=labOverdue(t);var act=t.method.indexOf('КТ')>-1?'<button class="btn btn-ghost" data-act="kt">'+ic('i-scan')+'КТ-модуль</button>':'';
    var pr=t.status==='done'?'<span class="doc-ok">'+ic('i-check')+' протокол загружен</span>':'<button class="btn btn-primary" data-act="lab-done" data-id="'+t.id+'">Загрузить протокол</button>';
-   return '<tr><td>'+t.id+'</td><td>'+esc(t.sample)+'</td><td>'+esc(t.method)+'</td><td>'+t.due+'</td><td>'+esc(t.who)+'</td><td>'+sb(t.status)+'</td><td class="row-actions">'+act+pr+'</td></tr>';}).join('')+'</table>'):'<div class="empty">'+(role==='scientist'?'У вас нет назначенных заданий.':'Заданий на испытания нет.')+'</div>';
+   return '<tr'+(ov?' class="risk-row"':'')+'><td>'+t.id+'</td><td>'+esc(t.sample)+'</td><td>'+esc(t.method)+'</td><td>'+t.due+(ov?' <span class="lead-age hot">просрочено</span>':'')+'</td><td>'+esc(t.who)+'</td><td>'+sb(t.status)+'</td><td class="row-actions">'+act+pr+'</td></tr>';}).join('')+'</table>'):'<div class="empty">'+(role==='scientist'?'У вас нет назначенных заданий.':'Заданий на испытания нет.')+'</div>';
  return '<div class="panel"><h3>'+ic('i-lab')+'Задания на испытания '+head+'</h3>'+tbl+'</div>'+
   (role==='lab_head'?'<div class="panel"><h3>'+ic('i-report')+'Загрузка по сотрудникам</h3>'+barList([['Зайцев',DATA.lab.filter(function(t){return t.who==='Зайцев'&&t.status!=='done';}).length||1],['Кузнецова',DATA.lab.filter(function(t){return t.who==='Кузнецова'&&t.status!=='done';}).length||1],['Резерв',1]])+'</div>':'');
 }
@@ -293,11 +302,12 @@ var RENDER={dash:mDash,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,c
 
 // ---------- shell ----------
 function renderApp(){var R=ROLES[state.role],menu=R.menu; if(menu.indexOf(state.mod)<0)state.mod=menu[0];
- var sidebar='<aside class="sidebar"><div class="brand"><img src="../img/logo.png" alt="ВНИИКП"><b>ВНИИКП<br><span style="font-weight:500;color:#9fb0bf;font-size:11px">система управления</span></b></div><nav class="menu" aria-label="Разделы">'+'<div class="grp">Кабинет: '+R.label+'</div>'+menu.map(function(m){return '<a data-mod="'+m+'" tabindex="0" role="button"'+(m===state.mod?' aria-current="page"':'')+' class="'+(m===state.mod?'active':'')+'">'+ic2(MOD[m][0])+MOD[m][1]+'</a>';}).join('')+'</nav><div class="foot">Прототип · демо-данные</div></aside>';
+ var newCount=DATA.leads.filter(function(l){return l.status==='new'&&!l.seen;}).length;
+ var sidebar='<aside class="sidebar"><div class="brand"><img src="../img/logo.png" alt="ВНИИКП"><b>ВНИИКП<br><span style="font-weight:500;color:#9fb0bf;font-size:11px">система управления</span></b></div><nav class="menu" aria-label="Разделы">'+'<div class="grp">Кабинет: '+R.label+'</div>'+menu.map(function(m){return '<a data-mod="'+m+'" tabindex="0" role="button"'+(m===state.mod?' aria-current="page"':'')+' class="'+(m===state.mod?'active':'')+'">'+ic2(MOD[m][0])+MOD[m][1]+(m==='leads'&&newCount?'<span class="menu-badge">'+newCount+'</span>':'')+'</a>';}).join('')+'</nav><div class="foot">Прототип · демо-данные</div></aside>';
  var initials=R.who.split(' ').slice(0,2).map(function(x){return x[0];}).join('');
  var roleOpts=Object.keys(ROLES).map(function(k){return '<option value="'+k+'"'+(k===state.role?' selected':'')+'>'+ROLES[k].label+'</option>';}).join('');
  var viOn=document.body.classList.contains('vi');
- var top='<div class="topbar"><div class="pagetitle">'+MOD[state.mod][1]+'</div><div class="spacer"></div><input class="search" placeholder="Поиск — в боевой версии" disabled title="Поиск появится в боевой версии"><button class="ta11y'+(viOn?' on':'')+'" id="a11yBtn" type="button" aria-pressed="'+(viOn?'true':'false')+'" title="Версия для слабовидящих">Аа</button><button class="treset" id="resetBtn" type="button" title="Сбросить демо-данные к исходному виду">Сбросить демо</button><div class="role-switch">Войти как: <select id="roleSel">'+roleOpts+'</select></div><div class="user"><div class="avatar">'+initials+'</div><div><div class="nm">'+R.who+'</div><div class="rl">'+R.label+'</div></div></div><button class="x" id="logout" title="Выйти">'+ic('i-out')+'</button></div>';
+ var top='<div class="topbar"><div class="pagetitle">'+MOD[state.mod][1]+'</div><div class="spacer"></div><input class="search" id="globalSearch" placeholder="Поиск по странице…" title="Фильтр заявок/строк на текущем экране"><button class="ta11y'+(viOn?' on':'')+'" id="a11yBtn" type="button" aria-pressed="'+(viOn?'true':'false')+'" title="Версия для слабовидящих">Аа</button><button class="treset" id="resetBtn" type="button" title="Сбросить демо-данные к исходному виду">Сбросить демо</button><div class="role-switch">Войти как: <select id="roleSel">'+roleOpts+'</select></div><div class="user"><div class="avatar">'+initials+'</div><div><div class="nm">'+R.who+'</div><div class="rl">'+R.label+'</div></div></div><button class="x" id="logout" title="Выйти">'+ic('i-out')+'</button></div>';
  var main='<div class="main">'+top+'<div class="demobar">⚙ ПРОТОТИП — кнопки рабочие, данные демонстрационные (сохраняются в сессии). Боевая версия: backend + авторизация + онлайн-оплата + 152-ФЗ.</div><div class="content">'+RENDER[state.mod](state.role)+'</div></div>';
  document.getElementById('app').innerHTML=SPRITE+'<div class="shell">'+sidebar+main+'</div><div class="drawer-bg" id="dbg"></div><div class="drawer" id="drawer"></div><div id="toast" class="toast"></div>';
 }
@@ -317,7 +327,10 @@ function can(a){return PERM[a]&&PERM[a].indexOf(state.role)>-1;}
 function whoDoes(a){return {bill:'Менеджер',paid:'Бухгалтерия',act:'Бухгалтерия',tolab:'Менеджер / лаборатория'}[a];}
 function lbtn(kind,act,id,label){return '<button class="btn btn-'+kind+'" data-act="'+act+'" data-id="'+id+'">'+label+'</button>';}
 function permHint(t){return '<span class="perm-hint">'+ic('i-shield')+' '+t+'</span>';}
+function contactLinks(l){var p=[]; if(l.phone)p.push('<a href="tel:'+l.phone.replace(/[^+\d]/g,'')+'">'+esc(l.phone)+'</a>'); if(l.email)p.push('<a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a>'); return p.length?p.join('<br>'):'<span class="muted">не указаны</span>';}
+function updateLeadBadge(){var a=document.querySelector('.menu a[data-mod="leads"]'); if(!a)return; var old=a.querySelector('.menu-badge'); if(old)old.remove(); var n=DATA.leads.filter(function(l){return l.status==='new'&&!l.seen;}).length; if(n)a.insertAdjacentHTML('beforeend','<span class="menu-badge">'+n+'</span>');}
 function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l)return;
+ if(!l.seen){l.seen=true;saveData();updateLeadBadge();}
  var acts='';
  if(state.role==='director'){ acts='<span class="muted">режим просмотра (директор)</span>'; }
  else {
@@ -339,7 +352,7 @@ function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(
   '<div class="sod-r"><span>Оплату подтвердил</span><b>'+esc(l.paidBy||'—')+'</b></div>'+
   '<div class="sod-r"><span>Акт сформировал</span><b>'+esc(l.actBy||'—')+'</b></div></div>';
  var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#586673">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
- openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+ctl+notes+'<div class="btnrow">'+acts+'</div></div>');
+ openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+ctl+notes+'<div class="btnrow">'+acts+'</div></div>');
 }
 function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
  openDrawer('<div class="dh"><div><h3>Ответ клиенту</h3><div class="muted" style="font-size:13px">'+l.client+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Сообщение</label><textarea id="replyTxt" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit" placeholder="Здравствуйте! По вашей заявке…"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="lead-send" data-id="'+id+'">Отправить</button><button class="btn btn-ghost" data-act="lead-open" data-id="'+id+'">Назад</button></div></div>');}
@@ -370,8 +383,8 @@ document.addEventListener('click',function(e){
   case 'lead-paid': if(!can('paid')){toast('Недостаточно прав: оплату подтверждает '+whoDoes('paid'));break;} L.status='paid';L.paidDate='07.06';L.paidBy=who;logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
   case 'lead-act': { if(!can('act')){toast('Недостаточно прав: акт формирует '+whoDoes('act'));break;} var snapA=JSON.parse(JSON.stringify(L)); L.status='done';L.act=true;L.actBy=who;logAct(who,'сформирован акт по '+id);closeDrawer();go(); toast._undo=function(){var ix=DATA.leads.findIndex(function(x){return x.id===id;}); if(ix>-1)DATA.leads[ix]=snapA; logAct(who,'отменён акт по '+id); go(); toast('Действие отменено');}; toast('Акт сформирован, сделка закрыта','Отменить'); break; }
   case 'lead-tolab': if(!can('tolab')){toast('Недостаточно прав: передаёт в лабораторию '+whoDoes('tolab'));break;} DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'});logAct(who,'заявка '+id+' передана в лабораторию');closeDrawer();go();toast('Передано в лабораторию (создано задание)'); break;
-  case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
-  case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,service:s||'—',amount:am,status:'new',mgr:who,date:'07.06',notes:[]});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
+  case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Телефон</label><input id="nlp" placeholder="+7 (___) ___-__-__"></div><div class="fld"><label>E-mail</label><input id="nle" type="email" placeholder="client@example.ru"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
+  case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0,ph=(document.getElementById('nlp')||{}).value,em=(document.getElementById('nle')||{}).value; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,phone:ph,email:em,service:s||'—',amount:am,status:'new',mgr:who,date:'09.06',notes:[],events:[],seen:true});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
   case 'lab-done': var t=DATA.lab.find(function(x){return x.id===id;}); if(t){t.status='done';logAct(who,'загружен протокол '+id);} go();toast('Протокол загружен, задание выполнено'); break;
   case 'kt': window.open('../kt-morfometriya.html','_blank'); break;
   case 'ticket-open': var tk=DATA.tickets.find(function(x){return x.id===id;}); openDrawer('<div class="dh"><div><h3>Тикет '+id+'</h3><div class="muted" style="font-size:13px">от '+tk.from+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><p>'+esc(tk.subj)+'</p><div class="fld"><label>Комментарий</label><textarea rows="4" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="ticket-close" data-id="'+id+'">Решить и закрыть</button></div></div>'); break;
@@ -411,7 +424,13 @@ document.addEventListener('change',function(e){
  if(e.target.id==='hIconFile'){var f=e.target.files&&e.target.files[0]; if(f){if(f.size>400000)toast('Иконку лучше до ~300 КБ'); var rd=new FileReader(); rd.onload=function(){holIconData=rd.result; renderHolPreview();}; rd.readAsDataURL(f);}}
  if(document.getElementById('holPrev')) renderHolPreview();
 });
-document.addEventListener('input',function(e){ if(document.getElementById('holPrev')) renderHolPreview(); });
+document.addEventListener('input',function(e){
+ if(document.getElementById('holPrev')) renderHolPreview();
+ if(e.target.id==='globalSearch'){var q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.content .lead').forEach(function(el){el.style.display=(!q||el.textContent.toLowerCase().indexOf(q)>-1)?'':'none';});
+  document.querySelectorAll('.content table.tbl tr').forEach(function(tr){ if(tr.querySelector('th'))return; tr.style.display=(!q||tr.textContent.toLowerCase().indexOf(q)>-1)?'':'none';});
+ }
+});
 document.addEventListener('keydown',function(e){
  if(e.key==='Escape'){closeDrawer();return;}
  if(e.key==='Enter'||e.key===' '){var t=e.target; if(t&&t.matches&&t.matches('a[data-mod],[data-lead]')){e.preventDefault();t.click();}}

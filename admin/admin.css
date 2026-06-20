@@ -61,7 +61,19 @@ button{font-family:inherit;cursor:pointer}
 .demobar{background:var(--warn-soft);color:var(--warn);font-size:12.5px;padding:7px 24px;border-bottom:1px solid #f0dcae;text-align:center}
 
 /* ---------- КОМПОНЕНТЫ ---------- */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:20px}
+.kpi-hot{border-color:#f3c9cc;background:#fef6f6}
+.kpi-hot .val{color:var(--red)}
+/* возраст/SLA заявки */
+.lead-age{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600}
+.lead-age.hot{display:inline-block;background:#fde8e8;color:#b3261e;padding:1px 8px;border-radius:20px;font-weight:700}
+.lead.hot{border-color:#f0b8bc;box-shadow:0 0 0 1px #f3c9cc inset}
+/* бейдж новых заявок в меню */
+.menu-badge{margin-left:auto;background:var(--red);color:#fff;font-size:11px;font-weight:800;min-width:19px;height:19px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.menu a{position:relative}
+/* контакты в карточке заявки */
+.kv-contacts{text-align:right;font-size:13px}
+.kv-contacts a{color:var(--red);font-weight:600}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .kpi .lab{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
 .kpi .val{font-size:27px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
