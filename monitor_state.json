@@ -1,0 +1,26 @@
+{
+  "https://www.vniimp.ru/": {
+    "hash": "dc9cbf4eef77d0c9",
+    "status": 200
+  },
+  "https://wniikp.ru/": {
+    "hash": "509cc25bb9a28022",
+    "status": 200
+  },
+  "https://www.ic.vniimp.ru/": {
+    "hash": "31a39380880b3708",
+    "status": 200
+  },
+  "http://www.vniipd.ru/": {
+    "hash": "4776ca7764598bac",
+    "status": 200
+  },
+  "https://www.vniinapitkov.ru/": {
+    "hash": null,
+    "status": "error"
+  },
+  "https://edu.vniimp.ru/": {
+    "hash": "f47546a7ba0fcf81",
+    "status": 200
+  }
+}

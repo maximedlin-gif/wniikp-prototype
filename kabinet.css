@@ -92,7 +92,55 @@ body.kb{background:#f4f5f7;color:var(--ink);margin:0}
 .proto-concl{font-size:14px;margin:10px 0}
 .proto-sign{display:flex;justify-content:space-between;gap:20px;font-size:13px;color:var(--muted);margin-top:24px}
 
-@media (max-width:880px){.kb-kpis{grid-template-columns:repeat(2,1fr)}.kb-grid2{grid-template-columns:1fr}}
+/* пустые состояния */
+.kb-empty{padding:26px 18px;text-align:center;color:var(--muted);font-size:14px;background:#fafbfc;border:1px dashed var(--line);border-radius:12px}
+
+/* кнопки-«призраки» и вторичные действия в журнале */
+.kb-mini.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:7px 8px}
+.kb-mini.ghost:hover{color:var(--blue);border-color:var(--line);background:#fff}
+
+/* вердикт соответствия */
+.kb-vres{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.kb-vres.pass{background:#e8f6ec;color:#1d7a3a}
+.kb-vres.fail{background:#fde8e8;color:#b3261e}
+.kb-vres.border{background:#fff1db;color:#9a6400}
+.kb-vres.na{background:#eef0f3;color:var(--muted)}
+.proto-tab td.r.pass{color:#1d7a3a}
+.proto-tab td.r.fail{color:#b3261e}
+.proto-tab td.r.border{color:#9a6400}
+.proto-tab td.r.na{color:var(--muted);font-weight:500}
+
+/* статус поверки приборов */
+.kb-ver{font-size:11.5px;font-weight:600}
+.kb-ver.ok{color:#1d7a3a}
+.kb-ver.bad{color:#b3261e}
+.kb-cell.locked{background:#fbeaea;color:#c98;cursor:not-allowed}
+.kb-cell.locked:hover{background:#fbeaea;color:#c98}
+
+/* поля в модалках */
+.kb-fld{margin-bottom:6px}
+.kb-fld label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+.kb-resin{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit}
+.proto-tab td.r{font-weight:700}
+
+/* тост с отменой */
+.kb-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#23272c;color:#fff;padding:13px 18px;border-radius:11px;font-size:14px;box-shadow:0 12px 34px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:92vw}
+.kb-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.kb-undo{margin-left:12px;background:var(--amber);color:#3a1d00;border:none;border-radius:7px;padding:5px 12px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer}
+
+/* доступность: видимый фокус на всех интерактивных элементах */
+.kb-tab:focus-visible,.kb-mini:focus-visible,.kb-cell:focus-visible,.kb-labbar select:focus-visible,.kb-resin:focus-visible,.kb-undo:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+#kb-a11y.on{background:#fff;color:var(--blue-dark)}
+
+/* версия для слабовидящих */
+body.kb.vi{font-size:118%}
+body.kb.vi .kb-sub,body.kb.vi .kb-labbar-hint,body.kb.vi .kb-kpi .l,body.kb.vi .kb-table th{color:#33404b}
+body.kb.vi .kb-table td,body.kb.vi .proto-tab td,body.kb.vi .proto-tab th{font-size:15.5px}
+body.kb.vi .kb-tests{color:#33404b}
+body.kb.vi .kb-mini,body.kb.vi .kb-tab{border-width:2px}
+body.kb.vi .kb-cell.free{color:#5a6470}
+
+@media (max-width:880px){.kb-kpis{grid-template-columns:repeat(2,1fr)}.kb-grid2{grid-template-columns:1fr}.kb-table .kb-tests{display:none}}
 
 /* печать: только протокол */
 @media print{

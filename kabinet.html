@@ -8,13 +8,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=12">
-<link rel="stylesheet" href="kabinet.css?v=2">
+<link rel="stylesheet" href="kabinet.css?v=3">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body class="kb">
 <header class="kb-top"><div class="kb-wrap">
   <div class="kb-brand">ВНИИКП · Кабинет <span class="kb-demo">демо</span><div class="kb-sub2">Рабочее место лаборатории</div></div>
   <div class="kb-actions">
+    <button id="kb-a11y" class="kb-mini" type="button" aria-pressed="false" title="Версия для слабовидящих">Аа Для слабовидящих</button>
     <button id="kb-reset" class="kb-mini" type="button">Сбросить демо</button>
     <a href="index.html" class="kb-mini">← На сайт</a>
   </div>
@@ -26,17 +27,17 @@
     <select id="kb-lab"></select>
     <span class="kb-labbar-hint">— у каждой из 5 лабораторий свой кабинет</span>
   </div>
-  <div class="kb-tabs" role="tablist">
-    <button class="kb-tab active" data-tab="dash" type="button">Дашборд</button>
-    <button class="kb-tab" data-tab="journal" type="button">Журнал образцов</button>
-    <button class="kb-tab" data-tab="cal" type="button">Календарь приборов</button>
+  <div class="kb-tabs" role="tablist" aria-label="Разделы рабочего места">
+    <button class="kb-tab active" role="tab" aria-selected="true" aria-controls="kb-dash" id="tab-dash" data-tab="dash" type="button">Дашборд</button>
+    <button class="kb-tab" role="tab" aria-selected="false" aria-controls="kb-journal" id="tab-journal" data-tab="journal" type="button">Журнал образцов</button>
+    <button class="kb-tab" role="tab" aria-selected="false" aria-controls="kb-cal" id="tab-cal" data-tab="cal" type="button">Календарь приборов</button>
   </div>
-  <div id="kb-dash" class="kb-pane"></div>
-  <div id="kb-journal" class="kb-pane hidden"></div>
-  <div id="kb-cal" class="kb-pane hidden"></div>
+  <div id="kb-dash" class="kb-pane" role="tabpanel" aria-labelledby="tab-dash"></div>
+  <div id="kb-journal" class="kb-pane hidden" role="tabpanel" aria-labelledby="tab-journal"></div>
+  <div id="kb-cal" class="kb-pane hidden" role="tabpanel" aria-labelledby="tab-cal"></div>
 </div>
 
-<div id="kb-proto-modal" class="kb-modal hidden">
+<div id="kb-proto-modal" class="kb-modal hidden" role="dialog" aria-modal="true" aria-label="Протокол испытаний">
   <div class="kb-modal-box">
     <div class="kb-modal-head">
       <b>Протокол испытаний</b>
@@ -46,6 +47,9 @@
   </div>
 </div>
 
-<script src="kabinet.js?v=2"></script>
+<div id="kb-book-modal" class="kb-modal hidden" role="dialog" aria-modal="true" aria-label="Бронирование прибора"></div>
+<div id="kb-res-modal" class="kb-modal hidden" role="dialog" aria-modal="true" aria-label="Ввод результатов испытаний"></div>
+
+<script src="kabinet.js?v=3"></script>
 </body>
 </html>

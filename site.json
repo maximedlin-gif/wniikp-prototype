@@ -1,0 +1,194 @@
+{
+  "org": {
+    "short": "ВНИИ кондитерской промышленности",
+    "full": "Филиал ФГБНУ «ФНЦ пищевых систем им. В.М. Горбатова» РАН",
+    "topbar_left": "Филиал ФНЦ пищевых систем им. В.М. Горбатова РАН",
+    "logo": "img/logo.png",
+    "logo_alt": "ВНИИ кондитерской промышленности — филиал ФНЦ пищевых систем им. В.М. Горбатова РАН"
+  },
+  "contacts": {
+    "phone": "+7 (495) 963-65-35",
+    "phone_href": "+74959636535",
+    "email": "conditerprom@mail.ru",
+    "address_html": "107023, г. Москва,<br>ул. Электрозаводская, д. 20, стр. 3",
+    "hours": "Пн–чт 10:00–18:30, пт до 17:30",
+    "license": "Л035-00115-77/00097064 от 08.12.2017",
+    "tel_schema": "+7-495-963-65-35",
+    "postal": "107023",
+    "locality": "Москва",
+    "street": "ул. Электрозаводская, д. 20, стр. 3"
+  },
+  "nav": [
+    {
+      "href": "index.html",
+      "label": "Главная"
+    },
+    {
+      "href": "o-institute.html",
+      "label": "Институт",
+      "children": [
+        {
+          "href": "o-institute.html",
+          "label": "Об институте"
+        },
+        {
+          "href": "o-institute.html#rukovodstvo",
+          "label": "Руководство института"
+        },
+        {
+          "href": "o-institute.html#podrazdeleniya",
+          "label": "Научные подразделения"
+        },
+        {
+          "href": "o-institute.html#uchsovet",
+          "label": "Учёный совет"
+        },
+        {
+          "href": "o-institute.html#goszadanie",
+          "label": "Госзадание"
+        },
+        {
+          "href": "o-institute.html#tk149",
+          "label": "ТК 149 «Кондитерские изделия»"
+        },
+        {
+          "href": "o-institute.html#istoriya",
+          "label": "История"
+        },
+        {
+          "href": "vakansii.html",
+          "label": "Вакансии"
+        },
+        {
+          "href": "publikacii.html",
+          "label": "Публикации"
+        },
+        {
+          "href": "dokumenty.html",
+          "label": "Документы"
+        }
+      ]
+    },
+    {
+      "href": "uslugi.html",
+      "label": "Услуги",
+      "children": [
+        {
+          "href": "uslugi.html",
+          "label": "Каталог исследований и услуг"
+        },
+        {
+          "href": "kt-morfometriya.html",
+          "label": "КТ-контроль структуры"
+        },
+        {
+          "href": "keysy.html",
+          "label": "Кейсы"
+        },
+        {
+          "label": "Онлайн-инструменты",
+          "href": "instrumenty.html"
+        }
+      ]
+    },
+    {
+      "label": "Решения",
+      "href": "resheniya.html"
+    },
+    {
+      "href": "obuchenie.html",
+      "label": "Обучение"
+    },
+    {
+      "href": "biblioteka.html",
+      "label": "Библиотека"
+    },
+    {
+      "href": "novosti.html",
+      "label": "Новости"
+    },
+    {
+      "href": "kontakty.html",
+      "label": "Контакты"
+    }
+  ],
+  "active_alias": {
+    "usluga-srok-godnosti.html": "uslugi.html",
+    "vakansii.html": "o-institute.html",
+    "publikacii.html": "o-institute.html",
+    "dokumenty.html": "o-institute.html",
+    "keysy.html": "uslugi.html"
+  },
+  "cta_default": {
+    "href": "index.html#zayavka",
+    "label": "Оставить заявку"
+  },
+  "cta_page": {
+    "index.html": {
+      "href": "#zayavka",
+      "label": "Оставить заявку"
+    },
+    "usluga-srok-godnosti.html": {
+      "href": "#order",
+      "label": "Заказать"
+    },
+    "kt-morfometriya.html": {
+      "href": "#order",
+      "label": "Заказать"
+    },
+    "obuchenie.html": {
+      "href": "#zapis",
+      "label": "Записаться"
+    }
+  },
+  "footer": {
+    "institute": [
+      {
+        "href": "o-institute.html",
+        "label": "Об институте"
+      },
+      {
+        "href": "o-institute.html#rukovodstvo",
+        "label": "Руководство"
+      },
+      {
+        "href": "novosti.html",
+        "label": "Новости"
+      },
+      {
+        "href": "keysy.html",
+        "label": "Кейсы"
+      },
+      {
+        "href": "biblioteka.html",
+        "label": "Библиотека"
+      }
+    ],
+    "services": [
+      {
+        "href": "uslugi.html",
+        "label": "Каталог испытаний"
+      },
+      {
+        "href": "resheniya.html",
+        "label": "Решения для бизнеса"
+      },
+      {
+        "href": "kt-morfometriya.html",
+        "label": "КТ-контроль"
+      },
+      {
+        "href": "obuchenie.html",
+        "label": "Обучение"
+      },
+      {
+        "label": "Онлайн-инструменты",
+        "href": "instrumenty.html"
+      }
+    ],
+    "copyright": "© 1932–2026 ВНИИКП. Прототип.",
+    "bottom_note": "Демонстрационная версия"
+  },
+  "a11y_note": "Версия для слабовидящих — кнопка вверху страницы.",
+  "ribbon_default": "<b>ПРОТОТИП</b> — концепт нового сайта ВНИИКП для обсуждения."
+}

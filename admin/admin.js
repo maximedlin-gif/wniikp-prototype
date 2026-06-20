@@ -80,7 +80,7 @@ function nowt(){var d=10+LOG.length;return (d<10?'0':'')+d+':0'+(LOG.length%6);}
 var ROLES={
  director:{label:'Директор',who:'Белецкий С. Л.',menu:['dash','leads','finance','lab','reports','users']},
  manager:{label:'Менеджер',who:'Орлова Е.',menu:['dash','leads']},
- accountant:{label:'Бухгалтерия',who:'Иванова Н.',menu:['dash','finance','reports']},
+ accountant:{label:'Бухгалтерия',who:'Иванова Н.',menu:['dash','finance','leads','reports']},
  lab_head:{label:'Рук. лаборатории',who:'Белявская И. Г.',menu:['dash','lab','reports']},
  scientist:{label:'Научный сотрудник',who:'Зайцев Д.',menu:['lab']},
  support:{label:'Техподдержка',who:'Смирнов В.',menu:['dash','tickets','content','holidays']},
@@ -91,8 +91,24 @@ var MOD={dash:['i-dash','Дашборд'],leads:['i-leads','Заявки'],finan
  users:['i-users','Пользователи и права'],reports:['i-report','Отчёты'],holidays:['i-cal','Праздники']};
 var STATUS={new:['b-new','Новая'],work:['b-work','В работе'],bill:['b-bill','Счёт выставлен'],paid:['b-paid','Оплачено'],done:['b-done','Выполнено']};
 function sb(s){return '<span class="badge '+STATUS[s][0]+'">'+STATUS[s][1]+'</span>';}
-var state={role:null,mod:'dash',finView:'list'};
+var state={role:null,mod:'dash',finView:'list',uType:'budget'};
 var holIconData=null; // data-URL загруженной своей иконки (на время заполнения формы)
+
+// ---------- сохранение демо-данных (localStorage) ----------
+var ADMKEY='wniikp_admin_v1';
+var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays}));
+function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,log:LOG,uType:state.uType}));}catch(e){}}
+function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
+function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
+loadData();
+
+// ---------- НДС и тип учреждения ----------
+function vatOf(l){var s=String(l.service||'').toLowerCase(); if(/обучен/.test(s))return 'none'; if(/маркир|\bту\b|рецептур/.test(s))return '20'; return 'lgota';}
+function vatLabel(l){return {none:'без НДС',20:'НДС 20%',lgota:'льгота п.149 НК'}[vatOf(l)];}
+function vatShort(l){return {none:'—',20:'20%',lgota:'льгота'}[vatOf(l)];}
+function vatAmount(l){return vatOf(l)==='20'?Math.round(l.amount-l.amount/1.2):0;}
+function formNo(){return state.uType==='kazna'?'0503127':'0503737';}
+function formName(){return state.uType==='kazna'?'Отчёт об исполнении бюджетной сметы (ф. 0503127, казённое учреждение)':'Отчёт об исполнении плана ФХД (ф. 0503737, бюджетное/автономное учреждение)';}
 
 // ---------- charts ----------
 function lineChart(rows){var w=580,h=180,p=28,max=Math.max.apply(null,rows.map(function(r){return r[1];}))*1.1,st=(w-p*2)/(rows.length-1);
@@ -107,6 +123,7 @@ function barList(rows){var max=Math.max.apply(null,rows.map(function(r){return r
 
 // ---------- helpers ----------
 function sum(arr){return arr.reduce(function(a,b){return a+b;},0);}
+function plural(n,one,few,many){var m=n%100,d=n%10; if(m>10&&m<20)return many; if(d===1)return one; if(d>=2&&d<=4)return few; return many;}
 function paidLeads(){return DATA.leads.filter(function(l){return l.status==='paid'||l.status==='done';});}
 function factRevenue(){return sum(paidLeads().map(function(l){return l.amount;}))+1610000;}
 
@@ -126,11 +143,13 @@ function mDash(role){
   '<div class="grid2"><div class="panel"><h3>'+ic('i-fin')+'Выручка по месяцам, тыс. ₽</h3>'+lineChart(DATA.revMonths)+'</div><div class="panel"><h3>'+ic('i-report')+'Выручка по услугам, тыс. ₽</h3>'+barList(DATA.revServices)+'</div></div>'+
   '<div class="panel"><h3>'+ic('i-leads')+'Последние заявки<span class="hint">режим просмотра</span></h3>'+leadsTable(DATA.leads.slice(0,6))+'</div>';
 }
-function leadsTable(rows){return '<table class="tbl"><tr><th>№</th><th>Клиент</th><th>Услуга</th><th>Менеджер</th><th>Статус</th><th class="num">Сумма</th></tr>'+
- rows.map(function(l){return '<tr data-lead="'+l.id+'"><td>'+l.id+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+l.mgr+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table>';}
+function leadsTable(rows){if(!rows.length)return '<div class="empty">Заявок пока нет.</div>';
+ return '<table class="tbl"><tr><th>№</th><th>Клиент</th><th>Услуга</th><th>Менеджер</th><th>Статус</th><th class="num">Сумма</th></tr>'+
+ rows.map(function(l){return '<tr data-lead="'+l.id+'" tabindex="0"><td>'+l.id+'</td><td>'+esc(l.client)+'</td><td>'+esc(l.service)+'</td><td>'+esc(l.mgr)+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table>';}
 function leadsKanban(editable){var cols=['new','work','bill','paid','done'];
  return '<div class="kanban">'+cols.map(function(c){var it=DATA.leads.filter(function(l){return l.status===c;});
-  return '<div class="kcol"><h4>'+STATUS[c][1]+'<span>'+it.length+'</span></h4>'+it.map(function(l){return '<div class="lead" data-lead="'+l.id+'"><div class="cl">'+l.client+'</div><div class="sv">'+l.service+'</div><div class="am">'+money(l.amount)+'</div></div>';}).join('')+'</div>';}).join('')+'</div>';}
+  var cards=it.length?it.map(function(l){return '<div class="lead" data-lead="'+l.id+'" tabindex="0" role="button" aria-label="Заявка '+l.id+', '+esc(l.client)+'"><div class="cl">'+esc(l.client)+'</div><div class="sv">'+esc(l.service)+'</div><div class="am">'+money(l.amount)+'</div></div>';}).join(''):'<div class="kempty">пусто</div>';
+  return '<div class="kcol"><h4>'+STATUS[c][1]+'<span>'+it.length+'</span></h4>'+cards+'</div>';}).join('')+'</div>';}
 function mLeads(role){var ro=(role==='director');
  return '<div class="panel" style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><b>Воронка продаж</b><span class="muted">кликните заявку → действия</span>'+(ro?'<span class="hint">режим просмотра</span>':'<button class="btn btn-primary" style="margin-left:auto" data-act="new-lead">+ Новая заявка</button>')+'</div>'+leadsKanban(!ro);}
 
@@ -138,47 +157,69 @@ function mFinance(role){
  if(state.finView==='report') return finReport(role);
  var paid=paidLeads();
  return '<div class="kpis">'+kpi('Выручка за месяц',money(1840000),12,'i-fin')+kpi('Оплачено счетов',paid.length,undefined,'i-check')+kpi('Ожидает оплаты',money(sum(DATA.leads.filter(function(l){return l.status==='bill';}).map(function(l){return l.amount;}))),undefined,'i-fin')+kpi('План ФХД, факт',(factRevenue()/DATA.planFHD*100).toFixed(0)+'%',undefined,'i-report')+'</div>'+
-  '<div class="panel" style="display:flex;gap:10px;align-items:center"><b>'+ic('i-shield')+' Контроль и отчётность</b><span class="muted">доходы от платных услуг · КОСГУ 130</span><button class="btn btn-primary" style="margin-left:auto" data-act="fin-report">Отчёт для Счётной палаты</button></div>'+
+  '<div class="panel" style="display:flex;gap:10px;align-items:center"><b>'+ic('i-shield')+' Контроль и отчётность</b><span class="muted">доходы от платных услуг · подстатья 131 · КФО 2</span><button class="btn btn-primary" style="margin-left:auto" data-act="fin-report">Отчёт для Счётной палаты</button></div>'+
   '<div class="panel"><h3>'+ic('i-fin')+'Динамика выручки, тыс. ₽</h3>'+lineChart(DATA.revMonths)+'</div>'+
   '<div class="panel"><h3>'+ic('i-report')+'Счета и оплаты<span class="hint"><button class="btn btn-ghost" data-act="csv-invoices">Экспорт CSV</button></span></h3>'+
    '<table class="tbl"><tr><th>Счёт</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th class="num">Сумма</th></tr>'+
    DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;}).map(function(l){return '<tr><td>СЧ-'+l.id.slice(2)+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table></div>';
 }
+function dealReady(l){ // комплектность первички по сделке
+ var schet=['bill','paid','done'].indexOf(l.status)>-1;
+ var oplata=['paid','done'].indexOf(l.status)>-1;
+ var akt=!!l.act;
+ var gaps=[]; if(!schet)gaps.push('счёт'); if(!oplata)gaps.push('оплата'); if(!akt)gaps.push('акт');
+ return {dogovor:true,schet:schet,oplata:oplata,akt:akt,ok:gaps.length===0,gaps:gaps};
+}
+function svetofor(){
+ var deals=DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;});
+ if(!deals.length) return '<div class="panel"><h3>'+ic('i-shield')+'Светофор готовности к проверке</h3><div class="empty">Нет сделок с движением по доходам.</div></div>';
+ var risk=0, bad=0;
+ var ck=function(v){return v?'<span class="doc-ok">'+ic('i-check')+'</span>':'<span class="doc-no">нет</span>';};
+ var body=deals.map(function(l){var r=dealReady(l); if(!r.ok){risk+=l.amount;bad++;}
+  return '<tr class="'+(r.ok?'':'risk-row')+'"><td><b>'+l.id+'</b></td><td>'+l.client+'</td><td>'+ck(r.dogovor)+'</td><td>'+ck(r.schet)+'</td><td>'+ck(r.akt)+'</td><td>'+ck(r.oplata)+'</td><td>КФО 2 · 131</td><td>'+vatShort(l)+'</td><td class="num">'+money(l.amount)+'</td><td>'+(r.ok?'<span class="badge b-paid">готово</span>':'<span class="badge b-new">нет: '+r.gaps.join(', ')+'</span>')+'</td></tr>';}).join('');
+ var headline=bad? '<div class="risk-head bad">'+ic('i-shield')+' Под риском на проверке: <b>'+money(risk)+'</b> — '+bad+' '+plural(bad,'сделка','сделки','сделок')+' с неполной первичкой' : '<div class="risk-head ok">'+ic('i-check')+' Все сделки укомплектованы: договор → счёт → акт → поступление, КФО и НДС проставлены';
+ return '<div class="panel"><h3>'+ic('i-shield')+'Светофор готовности к проверке<span class="hint">комплектность первички по каждой сделке</span></h3>'+headline+'</div>'+
+  '<table class="tbl svetofor"><tr><th>Сделка</th><th>Заказчик</th><th>Договор</th><th>Счёт</th><th>Акт</th><th>Оплата</th><th>КФО/КОСГУ</th><th>НДС</th><th class="num">Сумма</th><th>Готовность</th></tr>'+body+'</table></div>';
+}
 function finReport(role){
  var rows=paidLeads();
  var fact=sum(rows.map(function(l){return l.amount;}));
+ var totalVat=sum(rows.map(vatAmount));
  var closed=rows.filter(function(l){return l.act;}).length;
  var pct=(factRevenue()/DATA.planFHD*100).toFixed(0);
- var reg='<table class="tbl"><tr><th>Договор</th><th>Счёт</th><th>Акт</th><th>Заказчик</th><th>Услуга</th><th>Оплата</th><th>КОСГУ</th><th class="num">Сумма</th></tr>'+
+ var reg=rows.length?('<table class="tbl"><tr><th>Договор</th><th>Счёт</th><th>Акт</th><th>Заказчик</th><th>Услуга</th><th>Оплата</th><th>КФО</th><th>КОСГУ</th><th>НДС</th><th class="num">Сумма</th></tr>'+
   rows.map(function(l){var act=l.act?'<span class="doc-ok">А-'+l.id.slice(2)+'</span>':'<span class="doc-no">нет акта</span>';
-   return '<tr><td>Д-'+l.id.slice(2)+'</td><td>СЧ-'+l.id.slice(2)+'</td><td>'+act+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+(l.paidDate||'—')+'</td><td>131</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+
-  '<tr><td colspan="7"><b>Итого доходов от платных услуг (КОСГУ 130)</b></td><td class="num"><b>'+money(fact)+'</b></td></tr></table>';
+   return '<tr><td>Д-'+l.id.slice(2)+'</td><td>СЧ-'+l.id.slice(2)+'</td><td>'+act+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+(l.paidDate||'—')+'</td><td>2</td><td>131</td><td>'+vatShort(l)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+
+  '<tr><td colspan="9"><b>Итого доходов от платных услуг (подстатья 131, счёт 205.31)</b></td><td class="num"><b>'+money(fact)+'</b></td></tr>'+
+  '<tr><td colspan="9">в т.ч. НДС к уплате (по облагаемым услугам)</td><td class="num">'+money(totalVat)+'</td></tr></table>'):'<div class="empty">Оплаченных доходов пока нет — реестр пуст.</div>';
  var trail='<table class="tbl"><tr><th>Время</th><th>Пользователь</th><th>Действие</th></tr>'+LOG.slice(0,8).map(function(e){return '<tr><td>'+e.t+'</td><td>'+e.who+'</td><td>'+esc(e.msg)+'</td></tr>';}).join('')+'</table>';
- return '<div class="panel" style="display:flex;gap:10px;align-items:center"><button class="btn btn-ghost" data-act="fin-list">← к финансам</button><b>'+ic('i-shield')+' Отчёт для контроля (Счётная палата / учредитель)</b><span class="hint">июнь 2026 · приносящая доход деятельность</span></div>'+
+ var uSel='<span class="hint">Тип учреждения: <select id="uTypeSel"><option value="budget"'+(state.uType!=='kazna'?' selected':'')+'>Бюджетное / автономное</option><option value="kazna"'+(state.uType==='kazna'?' selected':'')+'>Казённое</option></select></span>';
+ return '<div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost" data-act="fin-list">← к финансам</button><b>'+ic('i-shield')+' Отчёт для контроля (Счётная палата / учредитель)</b><span class="hint">июнь 2026 · приносящая доход деятельность</span>'+uSel+'</div>'+
+  svetofor()+
   '<div class="ctrl-cards">'+
-   ctrlCard('Доходы от платных услуг','КОСГУ 130 (детал. 131)',money(fact),'ok')+
-   ctrlCard('План ФХД — исполнение','факт / план '+money(DATA.planFHD),pct+'%',pct<50?'warn':'ok')+
+   ctrlCard('Кассовые поступления (КФО 2)','подстатья 131 · счёт 205.31',money(fact),'ok')+
+   ctrlCard('План ФХД — исполнение','кассовые поступления / план',pct+'%',pct<50?'warn':'ok')+
    ctrlCard('Закрыто актами','полнота первички',closed+' из '+rows.length,closed<rows.length?'warn':'ok')+
-   ctrlCard('Целевое использование','только цели по уставу','соответствует','ok')+'</div>'+
-  '<div class="planbar"><div class="planbar-fill" style="width:'+Math.min(100,pct)+'%"></div><span>План ФХД: '+money(DATA.planFHD)+' · Факт: '+money(factRevenue())+' ('+pct+'%)</span></div>'+
-  '<div class="panel"><h3>'+ic('i-fin')+'Реестр доходов: договор → счёт → акт → поступление<span class="hint"><button class="btn btn-ghost" data-act="csv-registry">Выгрузить (CSV)</button> <button class="btn btn-ghost" data-act="csv-737">Для ф. 0503737</button></span></h3>'+reg+'</div>'+
+   ctrlCard('Целевое использование','раздельный учёт КФО 2 / 4','соответствует','ok')+'</div>'+
+  '<div class="planbar"><div class="planbar-fill" style="width:'+Math.min(100,pct)+'%"></div><span>План ФХД: '+money(DATA.planFHD)+' · Кассовые поступления: '+money(factRevenue())+' ('+pct+'%)</span></div>'+
+  '<div class="panel"><h3>'+ic('i-fin')+'Реестр доходов: договор → счёт → акт → поступление<span class="hint"><button class="btn btn-ghost" data-act="csv-registry">Выгрузить (CSV)</button> <button class="btn btn-ghost" data-act="csv-737">Для ф. '+formNo()+'</button></span></h3>'+reg+'</div>'+
   '<div class="panel"><h3>'+ic('i-shield')+'Аудиторский след (кто и когда менял данные)</h3>'+trail+'</div>'+
-  '<div class="norm-note">Отчёт формирует операционные данные для статотчётности учреждения: <b>ф. 0503737</b> «Отчёт об исполнении плана ФХД» (приказ Минфина № 33н), доходы по <b>КОСГУ 130</b>. Счётная палата проверяет полноту доходов, соответствие плану ФХД, целевое использование и наличие первички (договор/счёт/акт). Бухгалтерская отчётность и проводки ведутся в 1С/бухпрограмме — портал отдаёт сверочный реестр.</div>';
+  '<div class="norm-note">Сверочный реестр операционных данных для статотчётности: <b>'+formName()+'</b>. Доходы от платных услуг — подстатья <b>КОСГУ 131</b> (счёт 205.31), вид финобеспечения <b>КФО 2</b>; раздельно от субсидии на госзадание (КФО 4). План ФХД исполняется <b>кассовым методом</b> (по поступлениям). Счётная палата проверяет полноту доходов, целевое использование, раздельный учёт и наличие первички (договор → счёт → акт → поступление). Проводки, НДС и бухотчётность ведутся в 1С/бухпрограмме — портал отдаёт сверочный реестр.</div>';
 }
 function ctrlCard(t,sub,val,st){return '<div class="ctrl-card '+st+'"><div class="cc-t">'+t+'</div><div class="cc-v">'+val+'</div><div class="cc-s">'+sub+'</div></div>';}
 
 function mLab(role){var head=(role==='scientist')?'<span class="access-pill">доступ: только свои задания</span>':'<span class="access-pill">доступ: вся лаборатория</span>';
  var rows=DATA.lab; if(role==='scientist') rows=rows.filter(function(t){return t.who==='Зайцев';});
- return '<div class="panel"><h3>'+ic('i-lab')+'Задания на испытания '+head+'</h3>'+
-  '<table class="tbl"><tr><th>№</th><th>Образец</th><th>Метод</th><th>Срок</th><th>Исполнитель</th><th>Статус</th><th></th></tr>'+
+ var tbl=rows.length?('<table class="tbl"><tr><th>№</th><th>Образец</th><th>Метод</th><th>Срок</th><th>Исполнитель</th><th>Статус</th><th></th></tr>'+
   rows.map(function(t){var act=t.method.indexOf('КТ')>-1?'<button class="btn btn-ghost" data-act="kt">'+ic('i-scan')+'КТ-модуль</button>':'';
    var pr=t.status==='done'?'<span class="doc-ok">'+ic('i-check')+' протокол загружен</span>':'<button class="btn btn-primary" data-act="lab-done" data-id="'+t.id+'">Загрузить протокол</button>';
-   return '<tr><td>'+t.id+'</td><td>'+t.sample+'</td><td>'+t.method+'</td><td>'+t.due+'</td><td>'+t.who+'</td><td>'+sb(t.status)+'</td><td class="row-actions">'+act+pr+'</td></tr>';}).join('')+'</table></div>'+
+   return '<tr><td>'+t.id+'</td><td>'+esc(t.sample)+'</td><td>'+esc(t.method)+'</td><td>'+t.due+'</td><td>'+esc(t.who)+'</td><td>'+sb(t.status)+'</td><td class="row-actions">'+act+pr+'</td></tr>';}).join('')+'</table>'):'<div class="empty">'+(role==='scientist'?'У вас нет назначенных заданий.':'Заданий на испытания нет.')+'</div>';
+ return '<div class="panel"><h3>'+ic('i-lab')+'Задания на испытания '+head+'</h3>'+tbl+'</div>'+
   (role==='lab_head'?'<div class="panel"><h3>'+ic('i-report')+'Загрузка по сотрудникам</h3>'+barList([['Зайцев',DATA.lab.filter(function(t){return t.who==='Зайцев'&&t.status!=='done';}).length||1],['Кузнецова',DATA.lab.filter(function(t){return t.who==='Кузнецова'&&t.status!=='done';}).length||1],['Резерв',1]])+'</div>':'');
 }
-function mTickets(role){return '<div class="panel"><h3>'+ic('i-help')+'Тикеты техподдержки</h3>'+
- '<table class="tbl"><tr><th>№</th><th>Тема</th><th>От кого</th><th>Статус</th><th></th></tr>'+
- DATA.tickets.map(function(t){return '<tr><td>'+t.id+'</td><td>'+t.subj+'</td><td>'+t.from+'</td><td>'+sb(t.status)+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="ticket-open" data-id="'+t.id+'">Открыть</button>'+(t.status!=='done'?'<button class="btn btn-primary" data-act="ticket-close" data-id="'+t.id+'">Закрыть</button>':'')+'</td></tr>';}).join('')+'</table></div>';}
+function mTickets(role){var tbl=DATA.tickets.length?('<table class="tbl"><tr><th>№</th><th>Тема</th><th>От кого</th><th>Статус</th><th></th></tr>'+
+ DATA.tickets.map(function(t){return '<tr><td>'+t.id+'</td><td>'+esc(t.subj)+'</td><td>'+esc(t.from)+'</td><td>'+sb(t.status)+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="ticket-open" data-id="'+t.id+'">Открыть</button>'+(t.status!=='done'?'<button class="btn btn-primary" data-act="ticket-close" data-id="'+t.id+'">Закрыть</button>':'')+'</td></tr>';}).join('')+'</table>'):'<div class="empty">Открытых тикетов нет.</div>';
+ return '<div class="panel"><h3>'+ic('i-help')+'Тикеты техподдержки</h3>'+tbl+'</div>';}
 function mContent(){var secs=[['Новости','novosti.html'],['Услуги','uslugi.html'],['Обучение','obuchenie.html'],['Кейсы','keysy.html'],['КТ-контроль','kt-morfometriya.html'],['Контакты/реквизиты','site.json']];
  return '<div class="panel"><h3>'+ic('i-content')+'Редактирование контента сайта<span class="hint">правки → пересборка (build.py)</span></h3>'+
   '<table class="tbl"><tr><th>Раздел</th><th>Источник</th><th></th></tr>'+secs.map(function(s){return '<tr><td>'+s[0]+'</td><td><code>'+s[1]+'</code></td><td class="row-actions"><button class="btn btn-ghost" data-act="content-edit" data-name="'+s[0]+'">Редактировать</button><button class="btn btn-primary" data-act="content-pub" data-name="'+s[0]+'">Опубликовать</button></td></tr>';}).join('')+'</table></div>';}
@@ -204,7 +245,7 @@ function mHolidays(){
     '</div></div>';
  }).join('');
  return '<div class="panel" style="display:flex;gap:10px;align-items:center"><b>'+ic('i-cal')+' Праздники отрасли</b><span class="muted">так баннеры выглядят на сайте — появляются в свои даты</span><button class="btn btn-ghost" style="margin-left:auto" data-act="hol-export">Экспорт holidays.json</button><button class="btn btn-primary" data-act="hol-add">+ Добавить праздник</button></div>'+
-  '<div class="holcards">'+cards+'</div>'+
+  '<div class="holcards">'+(DATA.holidays.length?cards:'<div class="empty">Праздников пока нет. Добавьте первый — кнопка «+ Добавить праздник».</div>')+'</div>'+
   '<div class="norm-note">Каждая карточка — живое превью баннера. Изменения попадают на сайт через файл <b>holidays.json</b>: кнопка «Экспорт» → файл кладётся в корень сайта (в боевой версии сохраняется автоматически). «На сайте» открывает страницу с этим праздником в новой вкладке.</div>';
 }
 function fxInner(icon,name,msg,ctaText){
@@ -252,34 +293,53 @@ var RENDER={dash:mDash,leads:mLeads,finance:mFinance,lab:mLab,tickets:mTickets,c
 
 // ---------- shell ----------
 function renderApp(){var R=ROLES[state.role],menu=R.menu; if(menu.indexOf(state.mod)<0)state.mod=menu[0];
- var sidebar='<aside class="sidebar"><div class="brand"><img src="../img/logo.png" alt="ВНИИКП"><b>ВНИИКП<br><span style="font-weight:500;color:#9fb0bf;font-size:11px">система управления</span></b></div><nav class="menu"><div class="grp">Кабинет: '+R.label+'</div>'+menu.map(function(m){return '<a data-mod="'+m+'" class="'+(m===state.mod?'active':'')+'">'+ic2(MOD[m][0])+MOD[m][1]+'</a>';}).join('')+'</nav><div class="foot">Прототип · демо-данные</div></aside>';
+ var sidebar='<aside class="sidebar"><div class="brand"><img src="../img/logo.png" alt="ВНИИКП"><b>ВНИИКП<br><span style="font-weight:500;color:#9fb0bf;font-size:11px">система управления</span></b></div><nav class="menu" aria-label="Разделы">'+'<div class="grp">Кабинет: '+R.label+'</div>'+menu.map(function(m){return '<a data-mod="'+m+'" tabindex="0" role="button"'+(m===state.mod?' aria-current="page"':'')+' class="'+(m===state.mod?'active':'')+'">'+ic2(MOD[m][0])+MOD[m][1]+'</a>';}).join('')+'</nav><div class="foot">Прототип · демо-данные</div></aside>';
  var initials=R.who.split(' ').slice(0,2).map(function(x){return x[0];}).join('');
  var roleOpts=Object.keys(ROLES).map(function(k){return '<option value="'+k+'"'+(k===state.role?' selected':'')+'>'+ROLES[k].label+'</option>';}).join('');
- var top='<div class="topbar"><div class="pagetitle">'+MOD[state.mod][1]+'</div><div class="spacer"></div><input class="search" placeholder="Поиск…"><div class="role-switch">Войти как: <select id="roleSel">'+roleOpts+'</select></div><div class="user"><div class="avatar">'+initials+'</div><div><div class="nm">'+R.who+'</div><div class="rl">'+R.label+'</div></div></div><button class="x" id="logout" title="Выйти">'+ic('i-out')+'</button></div>';
+ var viOn=document.body.classList.contains('vi');
+ var top='<div class="topbar"><div class="pagetitle">'+MOD[state.mod][1]+'</div><div class="spacer"></div><input class="search" placeholder="Поиск — в боевой версии" disabled title="Поиск появится в боевой версии"><button class="ta11y'+(viOn?' on':'')+'" id="a11yBtn" type="button" aria-pressed="'+(viOn?'true':'false')+'" title="Версия для слабовидящих">Аа</button><button class="treset" id="resetBtn" type="button" title="Сбросить демо-данные к исходному виду">Сбросить демо</button><div class="role-switch">Войти как: <select id="roleSel">'+roleOpts+'</select></div><div class="user"><div class="avatar">'+initials+'</div><div><div class="nm">'+R.who+'</div><div class="rl">'+R.label+'</div></div></div><button class="x" id="logout" title="Выйти">'+ic('i-out')+'</button></div>';
  var main='<div class="main">'+top+'<div class="demobar">⚙ ПРОТОТИП — кнопки рабочие, данные демонстрационные (сохраняются в сессии). Боевая версия: backend + авторизация + онлайн-оплата + 152-ФЗ.</div><div class="content">'+RENDER[state.mod](state.role)+'</div></div>';
  document.getElementById('app').innerHTML=SPRITE+'<div class="shell">'+sidebar+main+'</div><div class="drawer-bg" id="dbg"></div><div class="drawer" id="drawer"></div><div id="toast" class="toast"></div>';
 }
 function ic2(id){return '<svg class="ic" aria-hidden="true"><use href="#'+id+'"></use></svg>';}
-function go(){renderApp();}
-function toast(m){var t=document.getElementById('toast'); if(!t)return; t.textContent=m; t.classList.add('show'); clearTimeout(toast._); toast._=setTimeout(function(){t.classList.remove('show');},2600);}
-function closeDrawer(){var d=document.getElementById('drawer'),b=document.getElementById('dbg'); if(d)d.classList.remove('open'); if(b)b.classList.remove('open');}
-function openDrawer(html){var d=document.getElementById('drawer'); d.innerHTML=html; d.classList.add('open'); document.getElementById('dbg').classList.add('open');}
+function go(){saveData();renderApp();}
+function toast(m,undoLabel){var t=document.getElementById('toast'); if(!t)return; t.innerHTML=esc(m)+(undoLabel?' <button type="button" class="toast-undo">'+esc(undoLabel)+'</button>':''); t.classList.add('show'); clearTimeout(toast._); toast._=setTimeout(function(){t.classList.remove('show');},undoLabel?6000:2600); var b=t.querySelector('.toast-undo'); if(b)b.addEventListener('click',function(){t.classList.remove('show'); if(toast._undo)toast._undo();});}
+var lastFocusAdmin=null;
+function closeDrawer(){var d=document.getElementById('drawer'),b=document.getElementById('dbg'); if(d)d.classList.remove('open'); if(b)b.classList.remove('open'); if(lastFocusAdmin&&lastFocusAdmin.focus){try{lastFocusAdmin.focus();}catch(_){}lastFocusAdmin=null;}}
+function openDrawer(html){var d=document.getElementById('drawer'); lastFocusAdmin=document.activeElement; d.innerHTML=html; d.classList.add('open'); document.getElementById('dbg').classList.add('open'); var f=d.querySelector('button:not(.x),select,input,textarea,[tabindex]'); if(f){try{f.focus();}catch(_){}}}
 
 function renderLogin(){var roles=[['director','i-dash','Директор'],['manager','i-leads','Менеджер'],['accountant','i-fin','Бухгалтерия'],['lab_head','i-lab','Рук. лаборатории'],['scientist','i-lab','Научный сотрудник'],['support','i-help','Техподдержка'],['admin','i-users','Администратор']];
  document.getElementById('app').innerHTML=SPRITE+'<div class="login"><div class="login-card"><img src="../img/logo.png" alt="ВНИИКП"><h1>Система управления ВНИИКП</h1><p class="sub">Вход для сотрудников · единый портал</p><div class="fld"><label>Логин</label><input value="demo@vniikp.ru"></div><div class="fld"><label>Пароль</label><input type="password" value="••••••••"></div><div class="demo-note">— прототип, выберите роль для входа —</div><div class="role-grid">'+roles.map(function(r){return '<button data-role="'+r[0]+'">'+ic2(r[1])+r[2]+'</button>';}).join('')+'</div></div></div>';}
 
-// ---------- lead drawer ----------
+// ---------- lead drawer + разделение обязанностей ----------
+var PERM={bill:['manager','admin'],paid:['accountant','admin'],act:['accountant','admin'],reply:['manager','accountant','admin'],tolab:['manager','admin','lab_head']};
+function can(a){return PERM[a]&&PERM[a].indexOf(state.role)>-1;}
+function whoDoes(a){return {bill:'Менеджер',paid:'Бухгалтерия',act:'Бухгалтерия',tolab:'Менеджер / лаборатория'}[a];}
+function lbtn(kind,act,id,label){return '<button class="btn btn-'+kind+'" data-act="'+act+'" data-id="'+id+'">'+label+'</button>';}
+function permHint(t){return '<span class="perm-hint">'+ic('i-shield')+' '+t+'</span>';}
 function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l)return;
- var ro=(state.role==='director');
  var acts='';
- if(!ro){
-  if(l.status==='new'||l.status==='work') acts='<button class="btn btn-ghost" data-act="lead-reply" data-id="'+id+'">Ответить</button><button class="btn btn-primary" data-act="lead-bill" data-id="'+id+'">Выставить счёт</button><button class="btn btn-ghost" data-act="lead-tolab" data-id="'+id+'">Передать в лабораторию</button>';
-  else if(l.status==='bill') acts='<button class="btn btn-ghost" data-act="lead-reply" data-id="'+id+'">Ответить</button><button class="btn btn-primary" data-act="lead-paid" data-id="'+id+'">Принять оплату</button>';
-  else if(l.status==='paid') acts='<button class="btn btn-primary" data-act="lead-act" data-id="'+id+'">Сформировать акт</button>';
-  else acts='<span class="doc-ok">'+ic('i-check')+' сделка закрыта, акт сформирован</span>';
- } else acts='<span class="muted">режим просмотра (директор)</span>';
- var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#6a7783">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
- openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+l.client+'</span></div><div class="kv"><b>Услуга</b><span>'+l.service+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>Менеджер</b><span>'+l.mgr+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+notes+'<div class="btnrow">'+acts+'</div></div>');
+ if(state.role==='director'){ acts='<span class="muted">режим просмотра (директор)</span>'; }
+ else {
+  var p=[];
+  if(l.status==='new'||l.status==='work'){
+   if(can('reply'))p.push(lbtn('ghost','lead-reply',id,'Ответить'));
+   if(can('bill'))p.push(lbtn('primary','lead-bill',id,'Выставить счёт')); else p.push(permHint('Счёт выставляет '+whoDoes('bill')));
+   if(can('tolab'))p.push(lbtn('ghost','lead-tolab',id,'Передать в лабораторию'));
+  } else if(l.status==='bill'){
+   if(can('reply'))p.push(lbtn('ghost','lead-reply',id,'Ответить'));
+   if(can('paid'))p.push(lbtn('primary','lead-paid',id,'Принять оплату')); else p.push(permHint('Оплату подтверждает '+whoDoes('paid')));
+  } else if(l.status==='paid'){
+   if(can('act'))p.push(lbtn('primary','lead-act',id,'Сформировать акт')); else p.push(permHint('Акт формирует '+whoDoes('act')));
+  } else { p.push('<span class="doc-ok">'+ic('i-check')+' сделка закрыта, акт сформирован</span>'); }
+  acts=p.join('');
+ }
+ var ctl='<div class="sod"><div class="sod-t">'+ic('i-shield')+' Контроль (разделение обязанностей)</div>'+
+  '<div class="sod-r"><span>Счёт выставил</span><b>'+esc(l.billBy||'—')+'</b></div>'+
+  '<div class="sod-r"><span>Оплату подтвердил</span><b>'+esc(l.paidBy||'—')+'</b></div>'+
+  '<div class="sod-r"><span>Акт сформировал</span><b>'+esc(l.actBy||'—')+'</b></div></div>';
+ var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#586673">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
+ openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+ctl+notes+'<div class="btnrow">'+acts+'</div></div>');
 }
 function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
  openDrawer('<div class="dh"><div><h3>Ответ клиенту</h3><div class="muted" style="font-size:13px">'+l.client+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Сообщение</label><textarea id="replyTxt" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit" placeholder="Здравствуйте! По вашей заявке…"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="lead-send" data-id="'+id+'">Отправить</button><button class="btn btn-ghost" data-act="lead-open" data-id="'+id+'">Назад</button></div></div>');}
@@ -288,13 +348,15 @@ function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
 function download(name,text){var b=new Blob([text],{type:'text/csv;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
 function csvInvoices(){var rows=DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;});
  var t='Счёт;Клиент;Услуга;Статус;Сумма\n'+rows.map(function(l){return 'СЧ-'+l.id.slice(2)+';'+l.client+';'+l.service+';'+STATUS[l.status][1]+';'+l.amount;}).join('\n');download('scheta.csv',t);}
-function csvRegistry(){var rows=paidLeads();var t='Договор;Счёт;Акт;Заказчик;Услуга;Дата оплаты;КОСГУ;Сумма\n'+rows.map(function(l){return 'Д-'+l.id.slice(2)+';СЧ-'+l.id.slice(2)+';'+(l.act?'А-'+l.id.slice(2):'нет')+';'+l.client+';'+l.service+';'+(l.paidDate||'')+';131;'+l.amount;}).join('\n');download('reestr_dohodov_KOSGU130.csv',t);}
+function csvRegistry(){var rows=paidLeads();var t='Договор;Счёт;Акт;Заказчик;Услуга;Дата оплаты;КФО;КОСГУ;НДС;Сумма\n'+rows.map(function(l){return 'Д-'+l.id.slice(2)+';СЧ-'+l.id.slice(2)+';'+(l.act?'А-'+l.id.slice(2):'нет')+';'+l.client+';'+l.service+';'+(l.paidDate||'')+';2;131;'+vatShort(l)+';'+l.amount;}).join('\n');download('reestr_dohodov_131.csv',t);}
 
 // ---------- events ----------
 document.addEventListener('click',function(e){
- var rb=e.target.closest('[data-role]'); if(rb){state.role=rb.getAttribute('data-role');state.mod=ROLES[state.role].menu[0];state.finView='list';go();return;}
+ var rb=e.target.closest('[data-role]'); if(rb){state.role=rb.getAttribute('data-role');state.mod=ROLES[state.role].menu[0];state.finView='list';logAct(ROLES[state.role].who,'вход в систему как «'+ROLES[state.role].label+'»');go();return;}
  var mn=e.target.closest('[data-mod]'); if(mn){state.mod=mn.getAttribute('data-mod');state.finView='list';go();return;}
  if(e.target.closest('#logout')){state.role=null;renderLogin();return;}
+ if(e.target.closest('#a11yBtn')){var vion=document.body.classList.toggle('vi'); try{localStorage.setItem('wniikp_admin_vi',vion?'1':'0');}catch(_){}; var ab=e.target.closest('#a11yBtn'); ab.setAttribute('aria-pressed',vion?'true':'false'); ab.classList.toggle('on',vion); return;}
+ if(e.target.closest('#resetBtn')){if(confirm('Сбросить демо-данные системы управления к исходному состоянию? Изменения (заявки, оплаты, праздники) будут возвращены.')){resetData();go();toast('Демо-данные сброшены');} return;}
  if(e.target.closest('#dbg')){closeDrawer();return;}
  var a=e.target.closest('[data-act]'); if(!a)
    { var ld=e.target.closest('[data-lead]'); if(ld) openLead(ld.getAttribute('data-lead')); return; }
@@ -304,10 +366,10 @@ document.addEventListener('click',function(e){
   case 'lead-open': openLead(id); break;
   case 'lead-reply': replyForm(id); break;
   case 'lead-send': var v=(document.getElementById('replyTxt')||{}).value||''; if(v.trim()){L.notes.push('Вы: '+v.trim());logAct(who,'ответ клиенту по '+id);toast('Ответ отправлен клиенту');} openLead(id); break;
-  case 'lead-bill': L.status='bill';logAct(who,'выставлен счёт по '+id);closeDrawer();go();toast('Счёт выставлен по '+id); break;
-  case 'lead-paid': L.status='paid';L.paidDate='07.06';logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
-  case 'lead-act': L.status='done';L.act=true;logAct(who,'сформирован акт по '+id);closeDrawer();go();toast('Акт сформирован, сделка закрыта'); break;
-  case 'lead-tolab': DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'});logAct(who,'заявка '+id+' передана в лабораторию');closeDrawer();toast('Передано в лабораторию (создано задание)'); break;
+  case 'lead-bill': if(!can('bill')){toast('Недостаточно прав: счёт выставляет '+whoDoes('bill'));break;} L.status='bill';L.billBy=who;logAct(who,'выставлен счёт по '+id);closeDrawer();go();toast('Счёт выставлен по '+id); break;
+  case 'lead-paid': if(!can('paid')){toast('Недостаточно прав: оплату подтверждает '+whoDoes('paid'));break;} L.status='paid';L.paidDate='07.06';L.paidBy=who;logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
+  case 'lead-act': { if(!can('act')){toast('Недостаточно прав: акт формирует '+whoDoes('act'));break;} var snapA=JSON.parse(JSON.stringify(L)); L.status='done';L.act=true;L.actBy=who;logAct(who,'сформирован акт по '+id);closeDrawer();go(); toast._undo=function(){var ix=DATA.leads.findIndex(function(x){return x.id===id;}); if(ix>-1)DATA.leads[ix]=snapA; logAct(who,'отменён акт по '+id); go(); toast('Действие отменено');}; toast('Акт сформирован, сделка закрыта','Отменить'); break; }
+  case 'lead-tolab': if(!can('tolab')){toast('Недостаточно прав: передаёт в лабораторию '+whoDoes('tolab'));break;} DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'});logAct(who,'заявка '+id+' передана в лабораторию');closeDrawer();go();toast('Передано в лабораторию (создано задание)'); break;
   case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
   case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,service:s||'—',amount:am,status:'new',mgr:who,date:'07.06',notes:[]});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
   case 'lab-done': var t=DATA.lab.find(function(x){return x.id===id;}); if(t){t.status='done';logAct(who,'загружен протокол '+id);} go();toast('Протокол загружен, задание выполнено'); break;
@@ -318,8 +380,8 @@ document.addEventListener('click',function(e){
   case 'content-edit': toast('Редактор раздела «'+a.getAttribute('data-name')+'» — в боевой версии'); break;
   case 'fin-report': state.finView='report';go(); break;
   case 'fin-list': state.finView='list';go(); break;
-  case 'csv-invoices': csvInvoices();toast('Счета выгружены в CSV'); break;
-  case 'csv-registry': csvRegistry();toast('Реестр доходов выгружен (CSV)'); break;
+  case 'csv-invoices': csvInvoices();logAct(who,'выгрузка реестра счетов (CSV)');toast('Счета выгружены в CSV'); break;
+  case 'csv-registry': csvRegistry();logAct(who,'выгрузка реестра доходов с заказчиками — '+paidLeads().length+' позиций (CSV)');toast('Реестр доходов выгружен (CSV)'); break;
   case 'csv-737': logAct(who,'выгрузка для ф. 0503737');toast('Данные подготовлены для ф. 0503737'); break;
   case 'toast': toast(a.getAttribute('data-msg')); break;
   case 'hol-add': holForm(null); break;
@@ -329,7 +391,7 @@ document.addEventListener('click',function(e){
   case 'hol-edit': holForm(id); break;
   case 'hol-prev': window.open('../index.html?prazdnik='+id,'_blank'); break;
   case 'hol-toggle': var hh=DATA.holidays.find(function(x){return x.key===id;}); if(hh){hh.enabled=(hh.enabled===false);logAct(who,(hh.enabled?'включён':'выключен')+' праздник «'+hh.name+'»');} go(); toast(hh&&hh.enabled?'Праздник включён':'Праздник выключен'); break;
-  case 'hol-del': DATA.holidays=DATA.holidays.filter(function(x){return x.key!==id;}); logAct(who,'удалён праздник'); closeDrawer(); go(); toast('Праздник удалён'); break;
+  case 'hol-del': { var hidx=DATA.holidays.findIndex(function(x){return x.key===id;}); if(hidx<0)break; var hsnap=DATA.holidays[hidx]; if(!confirm('Удалить праздник «'+hsnap.name+'»? Баннер перестанет показываться на сайте.'))break; DATA.holidays.splice(hidx,1); logAct(who,'удалён праздник «'+hsnap.name+'»'); closeDrawer(); go(); toast._undo=function(){DATA.holidays.splice(Math.min(hidx,DATA.holidays.length),0,hsnap); go(); toast('Удаление отменено');}; toast('Праздник «'+hsnap.name+'» удалён','Отменить'); break; }
   case 'hol-export': dlJSON('holidays.json',DATA.holidays); logAct(who,'экспортирован holidays.json'); toast('holidays.json выгружен — положите в корень сайта'); break;
   case 'hol-save': {
     var hname=val('hName').trim(); if(!hname){toast('Укажите заголовок');break;}
@@ -342,13 +404,18 @@ document.addEventListener('click',function(e){
  }
 });
 document.addEventListener('change',function(e){
- if(e.target.id==='roleSel'){state.role=e.target.value;state.mod=ROLES[state.role].menu[0];state.finView='list';go();}
+ if(e.target.id==='roleSel'){state.role=e.target.value;state.mod=ROLES[state.role].menu[0];state.finView='list';logAct(ROLES[state.role].who,'переключение роли: «'+ROLES[state.role].label+'»');go();}
+ if(e.target.id==='uTypeSel'){state.uType=e.target.value;go();}
  if(e.target.id==='hType'){var r=document.getElementById('hDateRow'); if(r)r.style.display=(e.target.value==='oct3sun')?'none':'';}
  if(e.target.id==='hIcon'){holIconData=null;}
  if(e.target.id==='hIconFile'){var f=e.target.files&&e.target.files[0]; if(f){if(f.size>400000)toast('Иконку лучше до ~300 КБ'); var rd=new FileReader(); rd.onload=function(){holIconData=rd.result; renderHolPreview();}; rd.readAsDataURL(f);}}
  if(document.getElementById('holPrev')) renderHolPreview();
 });
 document.addEventListener('input',function(e){ if(document.getElementById('holPrev')) renderHolPreview(); });
+document.addEventListener('keydown',function(e){
+ if(e.key==='Escape'){closeDrawer();return;}
+ if(e.key==='Enter'||e.key===' '){var t=e.target; if(t&&t.matches&&t.matches('a[data-mod],[data-lead]')){e.preventDefault();t.click();}}
+});
 
 // drag-and-drop сортировка карточек праздников
 var dragKey=null;
@@ -358,6 +425,7 @@ document.addEventListener('dragover',function(e){var c=e.target.closest&&e.targe
 document.addEventListener('drop',function(e){var c=e.target.closest&&e.target.closest('.holcard'); if(!c||!dragKey)return; e.preventDefault(); var toKey=c.getAttribute('data-id'); if(toKey!==dragKey){var r=c.getBoundingClientRect(); var after=e.clientY>(r.top+r.height/2); moveHoliday(dragKey,toKey,after); var who=state.role?ROLES[state.role].who:'—'; logAct(who,'изменён порядок праздников'); dragKey=null; clearDnd(); go(); toast('Порядок обновлён');} else {dragKey=null; clearDnd();}});
 document.addEventListener('dragend',function(){dragKey=null; clearDnd();});
 
+try{ if(localStorage.getItem('wniikp_admin_vi')==='1') document.body.classList.add('vi'); }catch(_){}
 var _rp=(location.search.match(/[?&]role=([a-z_]+)/)||[])[1];
 if(_rp&&ROLES[_rp]){state.role=_rp;go();} else { renderLogin(); }
 })();
