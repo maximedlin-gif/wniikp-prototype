@@ -76,6 +76,31 @@ var DATA={
   {id:'V-3',tag:'Лаборатория',icon:'ico-info',title:'Лаборант-микробиолог',reqs:['Среднее специальное / высшее образование','Опыт работы в микробиологической лаборатории','Знание санитарных норм'],type:'Полная занятость',published:true},
   {id:'V-4',tag:'Стажировка',icon:'ico-book',title:'Стажёр / аспирант',reqs:['Для студентов и выпускников профильных вузов','Участие в исследованиях института','Возможность публикаций и обучения'],type:'Стажировка',published:true}
  ],
+ cms:{
+  news:[
+   {id:'N-1',date:'18–20 мая 2026',title:'Курс «Органолептический анализ кондитерских изделий»',text:'Трёхдневный курс повышения квалификации (72 ч) для специалистов отрасли.',linkText:'Программа и запись →',linkHref:'obuchenie.html#organolept',published:true},
+   {id:'N-2',date:'',title:'Семинар «Методы определения диоксида серы»',text:'Двухдневный практикум для лабораторий и технологов: подготовка проб и измерение.',linkText:'Подробнее →',linkHref:'obuchenie.html#so2',published:true},
+   {id:'N-3',date:'',title:'Семинар «Техрегламенты и маркировка мучных изделий»',text:'Разбор требований ТР ТС и корректное оформление маркировки.',linkText:'Подробнее →',linkHref:'obuchenie.html#marking',published:true},
+   {id:'N-4',date:'',title:'Институт развивает неразрушающий КТ-контроль структуры изделий',text:'Морфометрия пористости по компьютерной томограмме — оценка структуры без разрезания.',linkText:'Смотреть метод и демо →',linkHref:'kt-morfometriya.html',published:true},
+   {id:'N-5',date:'',title:'ТК 149: актуализация ГОСТ на кондитерские изделия',text:'Институт как секретариат техкомитета участвует в разработке и пересмотре стандартов.',linkText:'Об институте →',linkHref:'o-institute.html',published:true},
+   {id:'N-6',date:'',title:'Более 500 научных работ сотрудников за 2008–2025 годы',text:'Результаты исследований публикуются в профильных научных изданиях.',linkText:'Подробнее →',linkHref:'o-institute.html',published:true}
+  ],
+  cases:[
+   {id:'C-1',tag:'Сроки годности',icon:'ico-clock',title:'Продление срока годности пряников до 180 дней',problem:'Производитель пряников хотел зайти в федеральную сеть, для которой требовался срок годности 180 дней вместо 90.',result:'срок 180 дней обоснован, продукт принят сетью',badge:'green',published:true},
+   {id:'C-2',tag:'КТ-контроль',icon:'ico-scan',title:'Контроль структуры бисквита при снижении меланжа',problem:'Производитель снижал долю яичного меланжа и опасался, что мякиш «осядет» и потеряет пышность.',result:'пористость снизилась с 24,1% до 18,7% — рецептуру скорректировали до серии',badge:'flag',published:true},
+   {id:'C-3',tag:'Импортозамещение',icon:'ico-swap',title:'Подбор аналога кондитерского жира',problem:'У производителя глазури ушёл поставщик жира — нужен аналог без потери качества и стабильности.',result:'подобран аналог, продукт сохранил свойства',badge:'green',published:true},
+   {id:'C-4',tag:'Арбитраж',icon:'ico-scales',title:'Снятие рекламации по «прогорклости» печенья',problem:'Торговая сеть вернула партию печенья с претензией к вкусу; производитель был уверен в качестве.',result:'показатели в норме, претензия снята',badge:'green',published:true}
+  ],
+  popular:[
+   {id:'P-1',title:'Экспертиза и идентификация шоколада',sub:'Подлинность, эквиваленты масла какао, дисперсность · ГОСТ 31721',href:'usluga-ekspertiza-shokolada.html',published:true},
+   {id:'P-2',title:'Установление срока годности',sub:'Обоснование и подтверждение для маркировки и сетей · МУК 4.2.1847',href:'usluga-srok-godnosti.html',published:true},
+   {id:'P-3',title:'Микробиология кондитерки',sub:'КМАФАнМ, дрожжи и плесени, БГКП, патогенные · ТР ТС 021',href:'usluga-mikrobiologiya.html',published:true},
+   {id:'P-4',title:'Контроль порчи жиров',sub:'Перекисное, кислотное, анизидиновое число, TOTOX · ГОСТ 26593',href:'usluga-porcha-zhirov.html',published:true},
+   {id:'P-5',title:'Пищевая ценность и маркировка',sub:'БЖУ и калорийность для этикетки · ТР ТС 022',href:'usluga-markirovka.html',published:true},
+   {id:'P-6',title:'Испытания мучных изделий',sub:'Печенье, пряники, вафли: влага, жир, намокаемость · ГОСТ',href:'usluga-mucnye.html',published:true},
+   {id:'P-7',title:'КТ-контроль структуры',sub:'Неразрушающая морфометрия пористости по томограмме',href:'kt-morfometriya.html',published:true}
+  ]
+ },
  users:[
   {nm:'Белецкий С. Л.',role:'Директор',dept:'Дирекция',acc:'Полный'},
   {nm:'Орлова Е.',role:'Менеджер',dept:'Отдел продаж',acc:'Заявки'},
@@ -112,15 +137,21 @@ var MOD={dash:['i-dash','Дашборд'],tasks:['i-report','Поручения'
  users:['i-users','Пользователи и права'],reports:['i-report','Отчёты'],holidays:['i-cal','Праздники']};
 var STATUS={new:['b-new','Новая'],work:['b-work','В работе'],bill:['b-bill','Счёт выставлен'],paid:['b-paid','Оплачено'],done:['b-done','Выполнено']};
 function sb(s){return '<span class="badge '+STATUS[s][0]+'">'+STATUS[s][1]+'</span>';}
-var state={role:null,mod:'dash',finView:'list',uType:'budget'};
+var state={role:null,mod:'dash',finView:'list',uType:'budget',cmsCol:null};
+var CMS={
+ news:{label:'Новости',page:'novosti.html',titleKey:'title',subKey:'date',fields:[{k:'date',l:'Дата (текст)',t:'text',ph:'18–20 мая 2026'},{k:'title',l:'Заголовок',t:'text'},{k:'text',l:'Текст',t:'area'},{k:'linkText',l:'Текст ссылки',t:'text',ph:'Подробнее →'},{k:'linkHref',l:'Адрес ссылки',t:'text',ph:'obuchenie.html'}]},
+ cases:{label:'Кейсы',page:'keysy.html',titleKey:'title',subKey:'tag',fields:[{k:'tag',l:'Метка',t:'text',ph:'Сроки годности'},{k:'icon',l:'Иконка',t:'select',opts:[['ico-clock','Часы'],['ico-scan','КТ'],['ico-swap','Замена'],['ico-scales','Весы'],['ico-doc','Документ']]},{k:'title',l:'Заголовок',t:'text'},{k:'problem',l:'Задача',t:'area'},{k:'result',l:'Результат (текст бейджа)',t:'text'}]},
+ popular:{label:'Услуги — карточки в каталоге',page:'uslugi.html',titleKey:'title',subKey:'href',fields:[{k:'title',l:'Заголовок',t:'text'},{k:'sub',l:'Подзаголовок',t:'text'},{k:'href',l:'Ссылка на страницу',t:'text',ph:'usluga-....html'}]}
+};
+var CMS_ORDER=['news','cases','popular'];
 var holIconData=null; // data-URL загруженной своей иконки (на время заполнения формы)
 
 // ---------- сохранение демо-данных (localStorage) ----------
 var ADMKEY='wniikp_admin_v1';
-var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies}));
-function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies,log:LOG,uType:state.uType}));}catch(e){}}
-function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.tasks)DATA.tasks=s.tasks; if(s.content)DATA.content=s.content; if(s.users)DATA.users=s.users; if(s.vacancies)DATA.vacancies=s.vacancies; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
-function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));DATA.tasks=JSON.parse(JSON.stringify(DEFAULTS.tasks));DATA.content=JSON.parse(JSON.stringify(DEFAULTS.content||{}));DATA.users=JSON.parse(JSON.stringify(DEFAULTS.users));DATA.vacancies=JSON.parse(JSON.stringify(DEFAULTS.vacancies||[]));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
+var DEFAULTS=JSON.parse(JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies,cms:DATA.cms}));
+function saveData(){try{localStorage.setItem(ADMKEY,JSON.stringify({leads:DATA.leads,lab:DATA.lab,tickets:DATA.tickets,holidays:DATA.holidays,tasks:DATA.tasks,content:DATA.content,users:DATA.users,vacancies:DATA.vacancies,cms:DATA.cms,log:LOG,uType:state.uType}));}catch(e){}}
+function loadData(){try{var s=JSON.parse(localStorage.getItem(ADMKEY)); if(s&&s.leads){DATA.leads=s.leads;DATA.lab=s.lab;DATA.tickets=s.tickets;DATA.holidays=s.holidays; if(s.tasks)DATA.tasks=s.tasks; if(s.content)DATA.content=s.content; if(s.users)DATA.users=s.users; if(s.vacancies)DATA.vacancies=s.vacancies; if(s.cms)DATA.cms=s.cms; if(s.log)LOG=s.log; if(s.uType)state.uType=s.uType;}}catch(e){}}
+function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.lab=JSON.parse(JSON.stringify(DEFAULTS.lab));DATA.tickets=JSON.parse(JSON.stringify(DEFAULTS.tickets));DATA.holidays=JSON.parse(JSON.stringify(DEFAULTS.holidays));DATA.tasks=JSON.parse(JSON.stringify(DEFAULTS.tasks));DATA.content=JSON.parse(JSON.stringify(DEFAULTS.content||{}));DATA.users=JSON.parse(JSON.stringify(DEFAULTS.users));DATA.vacancies=JSON.parse(JSON.stringify(DEFAULTS.vacancies||[]));DATA.cms=JSON.parse(JSON.stringify(DEFAULTS.cms||{}));LOG=[{t:'07.06 09:14',who:'Система',msg:'Демо-данные сброшены'}];saveData();}
 loadData();
 
 // ---------- НДС и тип учреждения ----------
@@ -340,9 +371,32 @@ function openVacancyForm(id){var v=id?DATA.vacancies.find(function(x){return x.i
   '<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="vpub"'+(v.published!==false?' checked':'')+'> Показывать на сайте</label>'+
   '<div class="btnrow"><button class="btn btn-primary" data-act="vac-save" data-id="'+(id||'')+'">Сохранить</button><button class="btn btn-ghost" data-act="close">Отмена</button></div></div>');
 }
-function mContent(){var secs=[['Новости','novosti.html'],['Услуги','uslugi.html'],['Обучение','obuchenie.html'],['Кейсы','keysy.html'],['КТ-контроль','kt-morfometriya.html'],['Контакты/реквизиты','site.json']];
- return '<div class="panel"><h3>'+ic('i-content')+'Редактирование контента сайта<span class="hint">правки → пересборка (build.py)</span></h3>'+
+function mContent(){
+ if(state.cmsCol&&CMS[state.cmsCol]) return mCmsCollection(state.cmsCol);
+ var cards=CMS_ORDER.map(function(col){var c=CMS[col],n=(DATA.cms[col]||[]).length;
+   return '<a class="cms-card" data-act="cms-open" data-col="'+col+'"><b>'+esc(c.label)+'</b><span>'+n+' '+plural(n,'запись','записи','записей')+' · '+esc(c.page)+'</span></a>';
+ }).join('');
+ var secs=[['Контакты/реквизиты','site.json'],['Обучение','obuchenie.html'],['Библиотека','biblioteka.html'],['КТ-контроль','kt-morfometriya.html']];
+ return '<div class="panel"><h3>'+ic('i-content')+'Коллекции контента<span class="hint">добавляйте / меняйте / удаляйте записи — выводятся на сайт</span></h3><div class="cms-grid">'+cards+'</div></div>'+
+  '<div class="panel"><h3>'+ic('i-content')+'Текстовые разделы<span class="hint">правка текста блока целиком</span></h3>'+
   '<table class="tbl"><tr><th>Раздел</th><th>Источник</th><th></th></tr>'+secs.map(function(s){return '<tr><td>'+s[0]+'</td><td><code>'+s[1]+'</code></td><td class="row-actions"><button class="btn btn-ghost" data-act="content-edit" data-name="'+s[0]+'">Редактировать</button><button class="btn btn-primary" data-act="content-pub" data-name="'+s[0]+'">Опубликовать</button></td></tr>';}).join('')+'</table></div>';}
+function mCmsCollection(col){var c=CMS[col],items=DATA.cms[col]||[];
+ var rows=items.map(function(x,i){var off=x.published===false;
+   return '<tr'+(off?' class="user-off"':'')+'><td><b>'+esc(x[c.titleKey]||'(без названия)')+'</b>'+(c.subKey&&x[c.subKey]?'<div class="kb-sub">'+esc(x[c.subKey])+'</div>':'')+'</td><td>'+(off?'<span class="badge b-done">скрыто</span>':'<span class="badge b-paid">на сайте</span>')+'</td><td class="row-actions"><button class="btn btn-ghost mv" data-act="cms-up" data-col="'+col+'" data-i="'+i+'"'+(i===0?' disabled':'')+'>&uarr;</button><button class="btn btn-ghost mv" data-act="cms-down" data-col="'+col+'" data-i="'+i+'"'+(i===items.length-1?' disabled':'')+'>&darr;</button><button class="btn btn-ghost" data-act="cms-edit" data-col="'+col+'" data-id="'+x.id+'">Изменить</button><button class="btn btn-ghost" data-act="cms-toggle" data-col="'+col+'" data-id="'+x.id+'">'+(off?'Показать':'Скрыть')+'</button><button class="btn btn-ghost" data-act="cms-del" data-col="'+col+'" data-id="'+x.id+'">Удалить</button></td></tr>';
+ }).join('');
+ return '<div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn btn-ghost" data-act="cms-back">← к коллекциям</button><b>'+ic('i-content')+' '+esc(c.label)+'</b><span class="muted">страница '+esc(c.page)+'</span><button class="btn btn-ghost" style="margin-left:auto" data-act="cms-export" data-col="'+col+'">Экспорт JSON</button><button class="btn btn-primary" data-act="cms-add" data-col="'+col+'">+ Добавить</button></div>'+
+  '<div class="panel">'+(items.length?'<table class="tbl"><tr><th>Запись</th><th>Статус</th><th></th></tr>'+rows+'</table>':'<div class="empty">Записей нет. Добавьте первую.</div>')+'</div>'+
+  '<div class="norm-note">Изменения выводятся на страницу «'+esc(c.label)+'» (в прототипе — из этой админки в том же браузере; в боевой версии сохраняются автоматически). «Экспорт JSON» — файл для боевого сайта.</div>';
+}
+function openCmsForm(col,id){var c=CMS[col],x=id?(DATA.cms[col]||[]).filter(function(y){return y.id===id;})[0]:{published:true};
+ var inp='width:100%;padding:10px;border:1px solid #e6eaef;border-radius:9px;font-family:inherit';
+ var flds=c.fields.map(function(f){var v=x[f.k]==null?'':x[f.k];
+   if(f.t==='area')return '<div class="fld"><label>'+f.l+'</label><textarea id="cf-'+f.k+'" rows="3" style="'+inp+'" placeholder="'+(f.ph||'')+'">'+esc(v)+'</textarea></div>';
+   if(f.t==='select'){var o=f.opts.map(function(op){return '<option value="'+op[0]+'"'+(v===op[0]?' selected':'')+'>'+op[1]+'</option>';}).join('');return '<div class="fld"><label>'+f.l+'</label><select id="cf-'+f.k+'" style="'+inp+'">'+o+'</select></div>';}
+   return '<div class="fld"><label>'+f.l+'</label><input id="cf-'+f.k+'" style="'+inp+'" value="'+esc(v)+'" placeholder="'+(f.ph||'')+'"></div>';
+ }).join('');
+ openDrawer('<div class="dh"><h3>'+(id?'Изменить':'Новая запись')+' · '+esc(c.label)+'</h3><button class="x" data-act="close">×</button></div><div class="db">'+flds+'<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="cf-pub"'+(x.published!==false?' checked':'')+'> Показывать на сайте</label><div class="btnrow"><button class="btn btn-primary" data-act="cms-save" data-col="'+col+'" data-id="'+(id||'')+'">Сохранить</button><button class="btn btn-ghost" data-act="close">Отмена</button></div></div>');
+}
 function mUsers(){var rows=[['Дашборд','yes','part','part','part','no','part','yes'],['Заявки','part','yes','part','no','no','no','yes'],['Финансы','part','no','yes','no','no','no','yes'],['Лаборатория','part','no','no','yes','part','no','yes'],['Контент','no','no','no','no','no','yes','yes'],['Техподдержка','no','no','no','no','no','yes','yes'],['Пользователи','part','no','no','no','no','no','yes']];
  var heads=['Директор','Менеджер','Бухг.','Рук.лаб.','Науч.сотр.','Тех.под.','Админ'];
  function cell(v){return v==='yes'?'<span class="yes">✓</span>':v==='part'?'<span class="part">просмотр</span>':'<span class="no">—</span>';}
@@ -504,7 +558,7 @@ function csvRegistry(){var rows=paidLeads();var t='Договор;Счёт;Ак�
 // ---------- events ----------
 document.addEventListener('click',function(e){
  var rb=e.target.closest('[data-role]'); if(rb){state.role=rb.getAttribute('data-role');state.mod=ROLES[state.role].menu[0];state.finView='list';logAct(ROLES[state.role].who,'вход в систему как «'+ROLES[state.role].label+'»');go();return;}
- var mn=e.target.closest('[data-mod]'); if(mn){state.mod=mn.getAttribute('data-mod');state.finView='list';go();return;}
+ var mn=e.target.closest('[data-mod]'); if(mn){state.mod=mn.getAttribute('data-mod');state.finView='list';state.cmsCol=null;go();return;}
  if(e.target.closest('#logout')){state.role=null;renderLogin();return;}
  if(e.target.closest('#menuBtn')){var sbar=document.querySelector('.sidebar'); if(sbar)sbar.classList.toggle('open'); return;}
  if(e.target.closest('#bellBtn')){var np=document.getElementById('notifPanel'); if(np)np.classList.toggle('open'); return;}
@@ -544,6 +598,15 @@ document.addEventListener('click',function(e){
   case 'vac-toggle': var vtg=DATA.vacancies.find(function(x){return x.id===id;}); if(vtg){vtg.published=(vtg.published===false); logAct(who,(vtg.published?'опубликована':'скрыта')+' вакансия «'+vtg.title+'»');} go(); toast(vtg&&vtg.published?'Вакансия на сайте':'Вакансия скрыта'); break;
   case 'vac-del': { var vdi=DATA.vacancies.findIndex(function(x){return x.id===id;}); if(vdi<0)break; var vsnap=DATA.vacancies[vdi]; if(!confirm('Удалить вакансию «'+vsnap.title+'»?'))break; DATA.vacancies.splice(vdi,1); logAct(who,'удалена вакансия «'+vsnap.title+'»'); go(); toast._undo=function(){DATA.vacancies.splice(Math.min(vdi,DATA.vacancies.length),0,vsnap);go();toast('Удаление отменено');}; toast('Вакансия удалена','Отменить'); break; }
   case 'vac-export': dlJSON('vakansii.json',DATA.vacancies); logAct(who,'экспорт vakansii.json'); toast('vakansii.json выгружен — положите в корень сайта'); break;
+  case 'cms-open': state.cmsCol=a.getAttribute('data-col'); go(); break;
+  case 'cms-back': state.cmsCol=null; go(); break;
+  case 'cms-add': openCmsForm(a.getAttribute('data-col'),null); break;
+  case 'cms-edit': openCmsForm(a.getAttribute('data-col'),id); break;
+  case 'cms-save': { var ccol=a.getAttribute('data-col'),cc=CMS[ccol]; var item={}; cc.fields.forEach(function(f){item[f.k]=val('cf-'+f.k);}); item.published=document.getElementById('cf-pub').checked; DATA.cms[ccol]=DATA.cms[ccol]||[]; if(id){var cix=DATA.cms[ccol].findIndex(function(y){return y.id===id;}); item.id=id; if(cix>-1){var old=DATA.cms[ccol][cix]; Object.keys(old).forEach(function(k){if(!(k in item))item[k]=old[k];}); DATA.cms[ccol][cix]=item;} logAct(who,'изменена запись в «'+cc.label+'»');} else {item.id=ccol+'-'+Date.now(); DATA.cms[ccol].push(item); logAct(who,'добавлена запись в «'+cc.label+'»');} closeDrawer();go();toast('Сохранено'); break; }
+  case 'cms-toggle': { var ctc=a.getAttribute('data-col'),cit=(DATA.cms[ctc]||[]).filter(function(y){return y.id===id;})[0]; if(cit){cit.published=(cit.published===false); logAct(who,(cit.published?'показана':'скрыта')+' запись в «'+CMS[ctc].label+'»');} go(); toast(cit&&cit.published?'Показано на сайте':'Скрыто'); break; }
+  case 'cms-del': { var cdc=a.getAttribute('data-col'),carr=DATA.cms[cdc]||[],cdi=carr.findIndex(function(y){return y.id===id;}); if(cdi<0)break; var csnap=carr[cdi]; if(!confirm('Удалить запись?'))break; carr.splice(cdi,1); logAct(who,'удалена запись в «'+CMS[cdc].label+'»'); go(); toast._undo=function(){carr.splice(Math.min(cdi,carr.length),0,csnap);go();toast('Удаление отменено');}; toast('Удалено','Отменить'); break; }
+  case 'cms-up': case 'cms-down': { var cmc=a.getAttribute('data-col'),marr=DATA.cms[cmc]||[],mi=+a.getAttribute('data-i'),mj=act==='cms-up'?mi-1:mi+1; if(mj<0||mj>=marr.length)break; var tmp=marr[mi];marr[mi]=marr[mj];marr[mj]=tmp; logAct(who,'изменён порядок в «'+CMS[cmc].label+'»'); go(); break; }
+  case 'cms-export': { var cec=a.getAttribute('data-col'); dlJSON(cec+'.json',DATA.cms[cec]||[]); logAct(who,'экспорт '+cec+'.json'); toast(cec+'.json выгружен'); break; }
   case 'kt': window.open('../kt-morfometriya.html','_blank'); break;
   case 'ticket-open': openTicket(id); break;
   case 'ticket-reply': var tkr=DATA.tickets.find(function(x){return x.id===id;}); var tkm=val('tkmsg').trim(); if(tkr&&tkm){tkr.thread=tkr.thread||[];tkr.thread.push({who:who,msg:tkm});if(tkr.status==='new')tkr.status='work';logAct(who,'комментарий к тикету '+id);} openTicket(id); break;

@@ -467,3 +467,17 @@ document.addEventListener('click', e=>{
     return '<div class="scn"><span class="tag">'+esc(v.tag)+'</span><h3><svg class="ic" aria-hidden="true"><use href="#'+(v.icon||'ico-doc')+'"></use></svg> '+esc(v.title)+'</h3><ul class="pkg">'+(v.reqs||[]).map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul><div class="foot"><span class="badge green">'+esc(v.type||'')+'</span><a class="btn btn-primary" href="kontakty.html#zayavka">Откликнуться</a></div></div>';
   }).join('');
 })();
+
+// ---- Коллекции контента: если их редактировали в админке (localStorage), показываем актуальный список ----
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});}
+  var cms; try{var a=JSON.parse(localStorage.getItem('wniikp_admin_v1')||'null'); if(a&&a.cms)cms=a.cms;}catch(e){}
+  if(!cms) return;
+  function pub(arr){return (arr||[]).filter(function(x){return x.published!==false;});}
+  var nl=document.getElementById('newsList');
+  if(nl&&cms.news){var it=pub(cms.news); if(it.length) nl.innerHTML=it.map(function(x){return '<article class="card link">'+(x.date?'<span class="badge amber">'+esc(x.date)+'</span>':'')+'<h3 style="margin-top:12px">'+esc(x.title)+'</h3><p>'+esc(x.text)+'</p>'+(x.linkHref?'<a class="more" href="'+esc(x.linkHref)+'">'+esc(x.linkText||'Подробнее →')+'</a>':'')+'</article>';}).join('');}
+  var cl=document.getElementById('caseList');
+  if(cl&&cms.cases){var ic=pub(cms.cases); if(ic.length) cl.innerHTML=ic.map(function(x){return '<div class="scn"><span class="tag">'+esc(x.tag)+'</span><h3><svg class="ic" aria-hidden="true"><use href="#'+(x.icon||'ico-doc')+'"></use></svg> '+esc(x.title)+'</h3><p class="pain"><b>Задача.</b> '+esc(x.problem)+'</p><div class="foot"><span class="badge '+(x.badge||'green')+'">Результат: '+esc(x.result)+'</span></div></div>';}).join('');}
+  var pl=document.getElementById('popularList');
+  if(pl&&cms.popular){var ip=pub(cms.popular); if(ip.length) pl.innerHTML=ip.map(function(x){return '<a class="popcard" href="'+esc(x.href)+'"><b>'+esc(x.title)+'</b><span>'+esc(x.sub)+'</span></a>';}).join('');}
+})();
