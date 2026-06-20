@@ -2,7 +2,7 @@
    календарь приборов, дашборд, вычисляемый протокол испытаний. Состояние — localStorage. Прототип. */
 (function () {
   "use strict";
-  var KEY = "wniikp_kabinet_v3";
+  var KEY = "wniikp_kabinet_v4";
   var LABS = [
     { id: "all", name: "Все лаборатории", methods: "сводно по всем лабораториям института" },
     { id: "micro", name: "Микробиология, гигиена и санитария", methods: "КМАФАнМ · дрожжи и плесени · БГКП · патогенные" },
@@ -11,11 +11,12 @@
     { id: "flour", name: "Технология мучных кондитерских изделий", methods: "прочность печенья · намокаемость · плотность теста" },
     { id: "choc", name: "Технология шоколадных и сахаристых изделий", methods: "идентификация шоколада · дисперсность · прочность студня" }
   ];
-  var INSTR = [
-    { id: "kt", name: "КТ-сканер", verifiedTill: "11.2026" },
-    { id: "nmr", name: "ЯМР-спектрометр", verifiedTill: "09.2026" },
-    { id: "chrom", name: "Хроматограф", verifiedTill: "03.2026" },
-    { id: "struct", name: "Структурометр", verifiedTill: "12.2026" }
+  // приборы — справочник по умолчанию (далее живут в state.instruments: можно добавлять/удалять/ремонтировать)
+  var DEFAULT_INSTR = [
+    { id: "kt", name: "КТ-сканер", verifiedTill: "11.2026", status: "ok", repairTill: "" },
+    { id: "nmr", name: "ЯМР-спектрометр", verifiedTill: "09.2026", status: "ok", repairTill: "" },
+    { id: "chrom", name: "Хроматограф", verifiedTill: "03.2026", status: "ok", repairTill: "" },
+    { id: "struct", name: "Структурометр", verifiedTill: "12.2026", status: "repair", repairTill: "25.06.2026" }
   ];
   var DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт"];
   var STATUS = { new: "Принят", work: "В работе", done: "Готов" };
@@ -99,6 +100,7 @@
         ], status: "done" },
       { id: "К-106", lab: "flour", date: "09.06", product: "Вафли", client: "ООО «Хрустик»", tests: ["Массовая доля общего жира (ГОСТ 31902-2012)", "Намокаемость (ГОСТ 10114)", "Массовая доля вафельной крошки (ГОСТ 5897-90)"], status: "new" }
     ],
+    instruments: JSON.parse(JSON.stringify(DEFAULT_INSTR)),
     bookings: { kt: { 0: "К-105", 2: "К-101" }, nmr: { 1: "К-104" }, chrom: { 0: "К-104", 3: "К-102" }, struct: { 2: "К-103" } }
   };
 
@@ -106,7 +108,17 @@
   try { state = JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { state = null; }
   if (!state || !state.samples) state = JSON.parse(JSON.stringify(SEED));
   if (!state.lab) state.lab = "all";
+  if (!state.instruments) state.instruments = JSON.parse(JSON.stringify(DEFAULT_INSTR));
   var undo = null; // последнее обратимое действие
+
+  /* доступность прибора для планирования: ремонт / просроченная поверка / готов */
+  function instrAvail(i) {
+    if (i.status === "repair") return { ok: false, reason: "repair", until: i.repairTill, label: "в ремонте до " + (i.repairTill || "—") };
+    if (isVerifyExpired(i.verifiedTill)) return { ok: false, reason: "verify", until: i.verifiedTill, label: "поверка просрочена (" + i.verifiedTill + ")" };
+    return { ok: true, reason: null, label: "готов · поверка до " + i.verifiedTill };
+  }
+  function instrById(id) { return state.instruments.filter(function (x) { return x.id === id; })[0]; }
+  function fmtDate(iso) { var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : iso; }
   function curLab() { return state.lab || "all"; }
   function curSamples() { var l = curLab(); return l === "all" ? state.samples : state.samples.filter(function (x) { return x.lab === l; }); }
   function labInfo() {
@@ -148,10 +160,15 @@
     var work = s.filter(function (x) { return x.status === "work"; }).length;
     var done = s.filter(function (x) { return x.status === "done"; }).length;
     var nw = s.filter(function (x) { return x.status === "new"; }).length;
-    var slots = INSTR.length * DAYS.length;
+    var avail = state.instruments.filter(function (i) { return instrAvail(i).ok; });
+    var slots = avail.length * DAYS.length;
     var used = 0;
-    INSTR.forEach(function (i) { used += Object.keys(state.bookings[i.id] || {}).length; });
-    var load = Math.round(used / slots * 100);
+    avail.forEach(function (i) { used += Object.keys(state.bookings[i.id] || {}).length; });
+    var load = slots ? Math.round(used / slots * 100) : 0;
+    var down = state.instruments.filter(function (i) { return !instrAvail(i).ok; });
+    var planBanner = down.length
+      ? '<div class="kb-planwarn"><b>⚠ Недоступны для планирования:</b> ' + down.map(function (i) { return esc(i.name) + " — " + esc(instrAvail(i).label); }).join("; ") + '. Учитывайте при распределении работ.</div>'
+      : '';
     function card(n, l, cls) { return '<div class="kb-kpi ' + (cls || "") + '"><div class="n">' + n + '</div><div class="l">' + l + "</div></div>"; }
     var recentRows = s.slice().reverse().slice(0, 5).map(function (x) {
       return '<tr><td><b>' + esc(x.id) + '</b></td><td>' + esc(x.product) + '</td><td>' + esc(x.client) + '</td><td>' + badge(x.status) + "</td></tr>";
@@ -160,13 +177,17 @@
     $("kb-dash").innerHTML =
       '<h2>Дашборд</h2>' + labInfo() +
       '<div class="kb-kpis">' + card(total, "Образцов всего") + card(nw, "Новые", "amber") + card(work, "В работе", "blue") + card(done, "Готово", "green") + card(load + "%", "Загрузка приборов") + "</div>" +
+      planBanner +
       '<div class="kb-grid2">' +
       '<div class="kb-box"><h3>Загрузка приборов (неделя)</h3>' + instrBars() + "</div>" +
       '<div class="kb-box"><h3>Последние образцы</h3>' + recent + "</div>" +
       "</div>";
   }
   function instrBars() {
-    return INSTR.map(function (i) {
+    if (!state.instruments.length) return empty("Приборов нет. Добавьте в «Календаре приборов».");
+    return state.instruments.map(function (i) {
+      var a = instrAvail(i);
+      if (!a.ok) return '<div class="kb-bar down"><span>' + esc(i.name) + '</span><div class="kb-track"><div class="kb-fill" style="width:0%"></div></div><b class="kb-bar-st ' + a.reason + '">' + (a.reason === "repair" ? "ремонт" : "поверка") + "</b></div>";
       var u = Object.keys(state.bookings[i.id] || {}).length;
       var pct = Math.round(u / DAYS.length * 100);
       return '<div class="kb-bar"><span>' + esc(i.name) + '</span><div class="kb-track"><div class="kb-fill" style="width:' + pct + '%"></div></div><b>' + u + "/5</b></div>";
@@ -276,28 +297,32 @@
 
   /* ---------- календарь приборов ---------- */
   function renderCal() {
-    var head = "<tr><th>Прибор</th>" + DAYS.map(function (d) { return "<th>" + d + "</th>"; }).join("") + "</tr>";
-    var body = INSTR.map(function (i) {
-      var expired = isVerifyExpired(i.verifiedTill);
+    var head = "<tr><th>Прибор / статус</th>" + DAYS.map(function (d) { return "<th>" + d + "</th>"; }).join("") + "</tr>";
+    var body = state.instruments.length ? state.instruments.map(function (i) {
+      var a = instrAvail(i);
       var cells = DAYS.map(function (d, di) {
         var bk = (state.bookings[i.id] || {})[di];
-        return '<td class="kb-cell ' + (bk ? "busy" : "free") + (expired ? " locked" : "") + '" data-i="' + i.id + '" data-d="' + di + '">' + (bk ? esc(bk) : (expired ? "✕" : "+")) + "</td>";
+        return '<td class="kb-cell ' + (bk ? "busy" : "free") + (a.ok ? "" : " locked") + '" data-i="' + i.id + '" data-d="' + di + '">' + (bk ? esc(bk) : (a.ok ? "+" : "✕")) + "</td>";
       }).join("");
-      var ver = '<span class="kb-ver ' + (expired ? "bad" : "ok") + '">поверка до ' + esc(i.verifiedTill) + (expired ? " · просрочена" : "") + "</span>";
-      return "<tr><td><b>" + esc(i.name) + "</b><div class=\"kb-sub\">" + ver + "</div></td>" + cells + "</tr>";
-    }).join("");
+      var pills = '<span class="kb-ver ' + (a.reason === "verify" ? "bad" : "ok") + '">поверка до ' + esc(i.verifiedTill) + (a.reason === "verify" ? " · просрочена" : "") + "</span>";
+      if (i.status === "repair") pills += ' <span class="kb-ver repair">в ремонте до ' + esc(i.repairTill || "—") + "</span>";
+      var acts = '<div class="kb-instr-acts">' +
+        (i.status === "repair"
+          ? '<button class="kb-mini" type="button" data-instr="unrepair" data-i="' + i.id + '">Вернуть в строй</button>'
+          : '<button class="kb-mini" type="button" data-instr="repair" data-i="' + i.id + '">В ремонт</button>') +
+        '<button class="kb-mini ghost" type="button" data-instr="del" data-i="' + i.id + '">Удалить</button></div>';
+      return '<tr class="' + (a.ok ? "" : "kb-row-down") + '"><td><b>' + esc(i.name) + "</b><div class=\"kb-sub\">" + pills + "</div>" + acts + "</td>" + cells + "</tr>";
+    }).join("") : '<tr><td colspan="' + (DAYS.length + 1) + '">' + empty("Приборов нет. Добавьте первый кнопкой «+ Добавить прибор».") + "</td></tr>";
     $("kb-cal").innerHTML =
-      '<h2>Календарь загрузки приборов</h2>' +
-      '<p class="kb-sub">Клик по ячейке — забронировать прибор под образец или снять бронь. Прибор с просроченной поверкой (✕) бронировать нельзя — требование ГОСТ ISO/IEC 17025 п.6.4. Демо-неделя.</p>' +
+      '<div class="kb-cal-head"><h2>Календарь загрузки приборов</h2><button class="kb-mini primary" type="button" data-instr="add">+ Добавить прибор</button></div>' +
+      '<p class="kb-sub">Клик по ячейке — бронь под образец или снятие брони. Прибор в ремонте или с просроченной поверкой (✕) бронировать нельзя — это видно и на дашборде, чтобы планировать загрузку с учётом простоя. ГОСТ ISO/IEC 17025 п.6.4. Демо-неделя.</p>' +
       '<table class="kb-cal-tab"><thead>' + head + "</thead><tbody>" + body + "</tbody></table>";
     $("kb-cal").querySelectorAll(".kb-cell").forEach(function (c) {
       c.addEventListener("click", function () {
-        var iid = c.dataset.i, di = c.dataset.d;
-        var instr = INSTR.filter(function (x) { return x.id === iid; })[0];
-        if (isVerifyExpired(instr.verifiedTill)) { toast(instr.name + ": поверка просрочена, бронь заблокирована"); return; }
-        state.bookings[iid] = state.bookings[iid] || {};
-        if (state.bookings[iid][di]) { delete state.bookings[iid][di]; save(); renderCal(); toast("Бронь снята"); }
-        else { openBookModal(iid, di); }
+        var iid = c.dataset.i, di = c.dataset.d, instr = instrById(iid), a = instrAvail(instr);
+        if (state.bookings[iid] && state.bookings[iid][di]) { delete state.bookings[iid][di]; save(); renderCal(); renderDash(); toast("Бронь снята"); return; }
+        if (!a.ok) { toast(instr.name + ": " + a.label + " — бронь заблокирована"); return; }
+        openBookModal(iid, di);
       });
     });
   }
@@ -307,7 +332,7 @@
     return (y < 2026) || (y === 2026 && mo < 6); // демо-«сегодня» — июнь 2026
   }
   function openBookModal(iid, di) {
-    var instr = INSTR.filter(function (x) { return x.id === iid; })[0];
+    var instr = instrById(iid);
     var opts = state.samples.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.id) + " — " + esc(s.product) + "</option>"; }).join("");
     var box = $("kb-book-modal");
     box.innerHTML =
@@ -318,6 +343,29 @@
       '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-book="ok" data-i="' + iid + '" data-d="' + di + '">Забронировать</button><button class="kb-mini" type="button" data-book="close">Отмена</button></div></div></div>';
     openModal(box);
     var sel = $("kb-book-sel"); if (sel) sel.focus();
+  }
+
+  /* ---------- управление приборами: добавить / в ремонт ---------- */
+  function openInstrModal(mode, iid) {
+    var box = $("kb-instr-modal");
+    var inp = "width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit";
+    if (mode === "add") {
+      var monOpts = "";
+      for (var m = 1; m <= 12; m++) { monOpts += '<option value="' + m + '">' + ("0" + m).slice(-2) + "</option>"; }
+      box.innerHTML =
+        '<div class="kb-modal-box" style="max-width:470px"><div class="kb-modal-head"><b>Добавить прибор</b><button class="kb-mini" type="button" data-instr="close">Отмена</button></div>' +
+        '<div class="proto"><div class="kb-fld"><label for="ni-name">Название прибора</label><input id="ni-name" style="' + inp + '" placeholder="напр. Вискозиметр Брукфилда"></div>' +
+        '<div class="kb-fld"><label>Поверка действительна до (месяц / год)</label><div style="display:flex;gap:8px"><select id="ni-mon" class="kb-resin" style="flex:1">' + monOpts + '</select><input id="ni-year" class="kb-resin" type="number" min="2026" max="2035" value="2027" style="width:120px"></div></div>' +
+        '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-instr="add-save">Добавить прибор</button><button class="kb-mini" type="button" data-instr="close">Отмена</button></div></div></div>';
+    } else {
+      var instr = instrById(iid);
+      box.innerHTML =
+        '<div class="kb-modal-box" style="max-width:450px"><div class="kb-modal-head"><b>В ремонт: ' + esc(instr.name) + '</b><button class="kb-mini" type="button" data-instr="close">Отмена</button></div>' +
+        '<div class="proto"><div class="kb-fld"><label for="ri-date">Ожидаемая дата возврата в строй</label><input id="ri-date" class="kb-resin" type="date" style="width:100%"></div>' +
+        '<p class="kb-sub">Пока прибор в ремонте, бронировать его нельзя. Статус и дата возврата видны в календаре и на дашборде — сотрудники и директор планируют работу с учётом простоя.</p>' +
+        '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-instr="repair-save" data-i="' + iid + '">Отправить в ремонт</button><button class="kb-mini" type="button" data-instr="close">Отмена</button></div></div></div>';
+    }
+    openModal(box);
   }
 
   /* ---------- протокол ---------- */
@@ -378,7 +426,7 @@
         if (a === "close") closeModal($("kb-book-modal"));
         else if (a === "ok") {
           var iid = bk.getAttribute("data-i"), di = bk.getAttribute("data-d"), v = ($("kb-book-sel") || {}).value;
-          if (v) { state.bookings[iid] = state.bookings[iid] || {}; state.bookings[iid][di] = v; save(); closeModal($("kb-book-modal")); renderCal(); toast("Прибор забронирован под " + v); }
+          if (v) { state.bookings[iid] = state.bookings[iid] || {}; state.bookings[iid][di] = v; save(); closeModal($("kb-book-modal")); renderCal(); renderDash(); toast("Прибор забронирован под " + v); }
         }
         return;
       }
@@ -387,6 +435,41 @@
         var ra = rs.getAttribute("data-res");
         if (ra === "close") closeModal($("kb-res-modal"));
         else if (ra === "save") saveResults(+rs.getAttribute("data-i"));
+        return;
+      }
+      var ins = e.target.closest("[data-instr]");
+      if (ins) {
+        var ia = ins.getAttribute("data-instr"), iid = ins.getAttribute("data-i");
+        if (ia === "close") { closeModal($("kb-instr-modal")); }
+        else if (ia === "add") { openInstrModal("add"); }
+        else if (ia === "add-save") {
+          var nm = (($("ni-name") || {}).value || "").trim();
+          if (!nm) { toast("Укажите название прибора"); return; }
+          var mon = ("0" + (($("ni-mon") || {}).value || "1")).slice(-2), yr = ($("ni-year") || {}).value || "2027";
+          var nid = "u" + (state.instruments.length + 1) + nm.replace(/\W+/g, "").slice(0, 4).toLowerCase();
+          state.instruments.push({ id: nid, name: nm, verifiedTill: mon + "." + yr, status: "ok", repairTill: "" });
+          save(); closeModal($("kb-instr-modal")); renderCal(); renderDash(); toast("Прибор «" + nm + "» добавлен");
+        }
+        else if (ia === "repair") { openInstrModal("repair", iid); }
+        else if (ia === "repair-save") {
+          var d = ($("ri-date") || {}).value;
+          if (!d) { toast("Укажите дату возврата"); return; }
+          var inst = instrById(iid); inst.status = "repair"; inst.repairTill = fmtDate(d);
+          save(); closeModal($("kb-instr-modal")); renderCal(); renderDash(); toast(inst.name + " — в ремонте до " + inst.repairTill);
+        }
+        else if (ia === "unrepair") {
+          var inst2 = instrById(iid); inst2.status = "ok"; inst2.repairTill = "";
+          save(); renderCal(); renderDash(); toast(inst2.name + " возвращён в строй");
+        }
+        else if (ia === "del") {
+          var inst3 = instrById(iid); if (!inst3) return;
+          if (!confirm("Удалить прибор «" + inst3.name + "» из списка? Его брони будут сняты.")) return;
+          var idx = state.instruments.indexOf(inst3), bkSnap = state.bookings[iid];
+          state.instruments.splice(idx, 1); delete state.bookings[iid];
+          save(); renderCal(); renderDash();
+          undo = function () { state.instruments.splice(Math.min(idx, state.instruments.length), 0, inst3); if (bkSnap) state.bookings[iid] = bkSnap; save(); renderCal(); renderDash(); toast("Удаление отменено"); };
+          toast("Прибор «" + inst3.name + "» удалён", "Отменить");
+        }
         return;
       }
       if (e.target.classList && e.target.classList.contains("kb-modal")) closeModal(e.target); // клик по фону
