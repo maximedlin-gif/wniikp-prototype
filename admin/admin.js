@@ -400,7 +400,7 @@ function synthEvents(l){var ev=[]; ev.push({t:l.date,who:l.mgr,msg:'Заявка
 function leadTimeline(l){var ev=(l.events&&l.events.length)?l.events:synthEvents(l); if(!ev.length)return ''; return '<div class="lead-tl"><div class="tl-t">'+ic('i-report')+' История заявки</div>'+ev.map(function(e){return '<div class="tl-row"><span class="tl-d">'+esc(e.t||'')+'</span><span class="tl-m">'+esc(e.msg)+'</span><span class="tl-w">'+esc(e.who||'')+'</span></div>';}).join('')+'</div>';}
 // сквозной поток: передача заявки реальным образцом в кабинет лаборатории (общий localStorage одного origin)
 function pushToKabinet(l){
- try{ var KK='wniikp_kabinet_v7', raw=localStorage.getItem(KK); if(!raw)return false; var st=JSON.parse(raw); if(!st||!st.samples)return false;
+ try{ var KK='wniikp_kabinet_v8', raw=localStorage.getItem(KK); if(!raw)return false; var st=JSON.parse(raw); if(!st||!st.samples)return false;
   var n=st.samples.length+101, sid='К-'+n, s=String(l.service||'').toLowerCase();
   var lab=/шоколад|идентифик|мармелад/.test(s)?'choc':/микроб|кмафанм|партии/.test(s)?'micro':/жир|хромат|перекис|аналог/.test(s)?'chrom':/мучн|вафл|печень|пряник/.test(s)?'flour':'physchem';
   st.samples.push({id:sid,lab:lab,date:'09.06',due:'16.06',product:l.service,client:l.client,tests:[l.service],status:'new',fromLead:l.id});

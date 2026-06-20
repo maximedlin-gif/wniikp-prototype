@@ -2,7 +2,7 @@
    календарь приборов, дашборд, вычисляемый протокол испытаний. Состояние — localStorage. Прототип. */
 (function () {
   "use strict";
-  var KEY = "wniikp_kabinet_v7";
+  var KEY = "wniikp_kabinet_v8";
   var LABS = [
     { id: "all", name: "Все лаборатории", methods: "сводно по всем лабораториям института" },
     { id: "micro", name: "Микробиология, гигиена и санитария", methods: "КМАФАнМ · дрожжи и плесени · БГКП · патогенные" },
@@ -111,7 +111,7 @@
       { id: "К-105", lab: "physchem", date: "06.06", product: "Конфеты глазированные", client: "Кондитер «Победа»",
         tests: [
           { ind: "КТ-морфометрия пористости", nd: "методика ВНИИКП", val: 27.0, unit: "%", lim: 30, op: "<=", u: 1.5 },
-          { ind: "Массовая доля влаги", nd: "ГОСТ 5900-2014", val: 7.7, unit: "%", lim: 8.0, op: "<=", u: 0.4 },
+          { ind: "Массовая доля влаги", nd: "ГОСТ 5900-2014", val: 7.7, unit: "%", lim: 8.0, op: "<=", u: 0.4, reps: [7.6, 7.7, 7.8], spread: 0.2 },
           { ind: "Активность воды", nd: "ГОСТ ISO 21807-2015", val: 0.55, unit: "a_w", lim: 0.60, op: "<=", u: 0.02 }
         ], status: "done", executor: "Кузнецова М.", instrument: "kt", approvedBy: "Белявская И. Г.", protocolNo: "ПИ-2026-105", measuredDate: "07.06" },
       { id: "К-106", lab: "flour", date: "09.06", due: "13.06", product: "Вафли", client: "ООО «Хрустик»", tests: ["Массовая доля общего жира (ГОСТ 31902-2012)", "Намокаемость (ГОСТ 10114)", "Массовая доля вафельной крошки (ГОСТ 5897-90)"], status: "new" }
@@ -250,6 +250,8 @@
       if (x.status === "work") { acts += '<button class="kb-mini" data-act="result" data-i="' + idx + '">→ Внести результат</button>'; acts += '<button class="kb-mini ghost" data-act="back-new" data-i="' + idx + '">↩ вернуть</button>'; }
       if (x.status === "review") { acts += '<button class="kb-mini primary" data-act="approve" data-i="' + idx + '">Утвердить (зав. лаб.)</button>'; acts += '<button class="kb-mini" data-act="proto" data-i="' + idx + '">Протокол</button>'; acts += '<button class="kb-mini ghost" data-act="back-work" data-i="' + idx + '">↩ в работу</button>'; }
       if (x.status === "done") { acts += '<button class="kb-mini primary" data-act="proto" data-i="' + idx + '">Протокол</button>'; acts += '<button class="kb-mini ghost" data-act="back-work" data-i="' + idx + '">↩ в работу</button>'; }
+      if (x.status === "new" || x.status === "work") acts += '<button class="kb-mini ghost" data-act="edit" data-i="' + idx + '" title="Изменить образец">✎</button>';
+      acts += '<button class="kb-mini ghost" data-act="del" data-i="' + idx + '" title="Удалить образец">✕</button>';
       var exNote = x.executor ? '<div class="kb-sub">исп.: ' + esc(x.executor) + "</div>" : "";
       var tests = (x.tests || []).map(function (t) { return "<li>" + esc(testName(t)) + "</li>"; }).join("");
       var ds = dueState(x);
@@ -269,7 +271,8 @@
       '<input id="js-cli" placeholder="Заказчик">' +
       '<input id="js-tests" placeholder="Испытания через запятую">' +
       '<input id="js-due" type="date" title="Срок выполнения" style="flex:0 0 160px">' +
-      '<button class="kb-mini primary" id="js-add">Принять</button></div></div>' + table;
+      '<button class="kb-mini primary" id="js-add">Принять</button></div></div>' +
+      (visible.length ? '<div class="kb-jtools"><input id="js-search" placeholder="Поиск: образец / продукт / заказчик…"><button class="kb-mini" id="js-csv">Экспорт CSV</button></div>' : "") + table;
     $("js-add").addEventListener("click", function () {
       var prod = $("js-prod").value.trim(); if (!prod) { toast("Укажите продукт"); return; }
       var n = state.samples.length + 101;
@@ -285,6 +288,14 @@
         else if (a === "proto") { showProtocol(x); }
         else if (a === "approve") { x.status = "done"; x.approvedBy = LAB_HEAD; save(); writeBackToAdmin(x); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
         else if (a === "back-new") { x.status = "new"; save(); refresh(); toast(x.id + " возвращён в «Принят»"); }
+        else if (a === "edit") { openEditModal(i); }
+        else if (a === "del") {
+          if (!confirm("Удалить образец " + x.id + "? Действие можно отменить.")) return;
+          var snap = JSON.parse(JSON.stringify(x)), pos = i;
+          state.samples.splice(i, 1); save(); refresh();
+          undo = function () { state.samples.splice(Math.min(pos, state.samples.length), 0, snap); save(); refresh(); toast("Удаление отменено"); };
+          toast(snap.id + " удалён", "Отменить");
+        }
         else if (a === "back-work") {
           var snapshot = JSON.parse(JSON.stringify(x));
           x.status = "work"; x.approvedBy = "";
@@ -294,6 +305,33 @@
         }
       });
     });
+    var sb = $("js-search");
+    if (sb) sb.addEventListener("input", function () {
+      var q = sb.value.trim().toLowerCase();
+      $("kb-journal").querySelectorAll("tbody tr").forEach(function (tr) { tr.style.display = (!q || tr.textContent.toLowerCase().indexOf(q) > -1) ? "" : "none"; });
+    });
+    var cb = $("js-csv"); if (cb) cb.addEventListener("click", exportJournalCsv);
+  }
+  function openEditModal(i) {
+    var x = state.samples[i], box = $("kb-edit-modal");
+    box.innerHTML = '<div class="kb-modal-box" style="max-width:480px"><div class="kb-modal-head"><b>Изменить образец ' + esc(x.id) + '</b><button class="kb-mini" type="button" data-edit="close">Отмена</button></div>' +
+      '<div class="proto"><div class="kb-fld"><label for="ed-prod">Продукт</label><input id="ed-prod" class="kb-resin" style="width:100%" value="' + esc(x.product) + '"></div>' +
+      '<div class="kb-fld"><label for="ed-cli">Заказчик</label><input id="ed-cli" class="kb-resin" style="width:100%" value="' + esc(x.client) + '"></div>' +
+      '<div class="kb-fld"><label for="ed-due">Срок (дд.мм)</label><input id="ed-due" class="kb-resin" style="width:140px" value="' + esc(x.due || "") + '"></div>' +
+      '<div class="btnrow" style="display:flex;gap:10px;margin-top:14px"><button class="kb-mini primary" type="button" data-edit="save" data-i="' + i + '">Сохранить</button><button class="kb-mini" type="button" data-edit="close">Отмена</button></div></div></div>';
+    openModal(box);
+  }
+  function exportJournalCsv() {
+    var rows = state.samples.filter(function (x) { return curLab() === "all" || x.lab === curLab(); });
+    var head = "Образец;Дата;Срок;Продукт;Заказчик;Статус;Исполнитель;Заключение";
+    var lines = rows.map(function (x) {
+      var v = sampleVerdict(x);
+      return [x.id, x.date, x.due || "", x.product, x.client, STATUS[x.status] || x.status, x.executor || "", v ? v.txt : ""].map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";");
+    });
+    var csv = "﻿" + head + "\n" + lines.join("\n");
+    var b = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "zhurnal_obrazcov.csv"; a.click();
+    toast("Журнал выгружен в CSV");
   }
   function refresh() { renderJournal(); /* dash KPI пересчитается при переходе */ }
 
@@ -310,13 +348,13 @@
       var normLabel = (lim === "" ? "показатель информативный" : (op === ">=" ? "не менее " : "не более ") + lim + " " + unit);
       return '<tr data-n="' + n + '" data-unit="' + esc(unit) + '" data-lim="' + lim + '" data-op="' + op + '" data-u="' + u + '">' +
         "<td>" + (n + 1) + "</td><td><b>" + esc(p.ind) + "</b><div class=\"kb-sub\">" + esc(p.nd || "") + " · " + esc(normLabel) + "</div></td>" +
-        '<td><input class="kb-resin" type="number" step="any" placeholder="' + (lim === "" ? "значение" : lim) + '" style="width:110px"> ' + esc(unit) + "</td></tr>";
+        '<td><input class="kb-resin" type="text" inputmode="decimal" placeholder="' + (lim === "" ? "значения" : lim + ", …") + '" style="width:160px" title="Одно значение или несколько через запятую (повторности)"> ' + esc(unit) + "</td></tr>";
     }).join("");
     var box = $("kb-res-modal");
     box.innerHTML =
       '<div class="kb-modal-box"><div class="kb-modal-head"><b>Внести результаты — ' + esc(x.id) + " · " + esc(x.product) + '</b>' +
       '<button class="kb-mini" type="button" data-res="close">Отмена</button></div>' +
-      '<div class="proto"><p class="kb-sub">Введите измеренное значение по каждому показателю. Норму по НД и расширенную неопределённость U (k=2) система подставит из справочника методик и сама вынесет вывод о соответствии с учётом неопределённости.</p>' +
+      '<div class="proto"><p class="kb-sub">Введите измеренное значение по каждому показателю. Можно ввести несколько параллельных определений через запятую — система посчитает среднее, сходимость (размах) и сама вынесет вывод о соответствии с учётом расширенной неопределённости U (k=2).</p>' +
       '<div class="kb-form" style="margin-bottom:12px">' +
         '<div class="kb-fld"><label for="res-exec">Исполнитель</label><select id="res-exec" class="kb-resin">' + EXECUTORS.map(function (e) { return "<option" + (x.executor === e ? " selected" : "") + ">" + esc(e) + "</option>"; }).join("") + "</select></div>" +
         '<div class="kb-fld"><label for="res-instr">Прибор (оборудование)</label><select id="res-instr" class="kb-resin"><option value="">— не указан —</option>' + state.instruments.map(function (ins) { return '<option value="' + esc(ins.id) + '"' + (x.instrument === ins.id ? " selected" : "") + ">" + esc(ins.name) + "</option>"; }).join("") + "</select></div>" +
@@ -335,7 +373,14 @@
       var t = { ind: p.ind, nd: p.nd, unit: tr.dataset.unit || p.unit || "" };
       var lim = tr.dataset.lim, u = tr.dataset.u, op = tr.dataset.op;
       if (lim !== "" && lim != null) { t.lim = +lim; t.op = op || "<="; t.u = (u !== "" ? +u : 0); }
-      if (raw !== "" && raw != null) t.val = +raw;
+      if (raw !== "" && raw != null) {
+        var nums = raw.split(/[,;\s]+/).map(function (s) { return parseFloat(s.replace(",", ".")); }).filter(function (v) { return !isNaN(v); });
+        if (nums.length) {
+          var rnd = function (n) { return Math.round(n * 1000) / 1000; };
+          t.val = rnd(nums.reduce(function (a, b) { return a + b; }, 0) / nums.length);
+          if (nums.length > 1) { t.reps = nums; t.spread = rnd(Math.max.apply(null, nums) - Math.min.apply(null, nums)); }
+        }
+      }
       return t;
     });
     x.executor = ($("res-exec") || {}).value || x.executor || "";
@@ -442,8 +487,9 @@
     var tests = (x.tests || []).map(parseTest);
     var rows = tests.map(function (t, n) {
       var v = verdict(t);
+      var repInfo = (t.reps && t.reps.length > 1) ? '<div class="kb-sub">n=' + t.reps.length + ", сходимость (размах) " + t.spread + (t.unit ? " " + t.unit : "") + "</div>" : "";
       return "<tr><td>" + (n + 1) + "</td><td>" + esc(t.ind) + '<div class="kb-sub">' + esc(t.nd || "") + "</div></td>" +
-        "<td>" + esc(resText(t)) + "</td><td>" + esc(normText(t)) + '</td><td class="r ' + v.cls + '">' + v.txt + "</td></tr>";
+        "<td>" + esc(resText(t)) + repInfo + "</td><td>" + esc(normText(t)) + '</td><td class="r ' + v.cls + '">' + v.txt + "</td></tr>";
     }).join("");
     var sv = sampleVerdict(x);
     var concl = sv
@@ -523,6 +569,16 @@
         var ra = rs.getAttribute("data-res");
         if (ra === "close") closeModal($("kb-res-modal"));
         else if (ra === "save") saveResults(+rs.getAttribute("data-i"));
+        return;
+      }
+      var ed = e.target.closest("[data-edit]");
+      if (ed) {
+        var ea = ed.getAttribute("data-edit");
+        if (ea === "close") closeModal($("kb-edit-modal"));
+        else if (ea === "save") {
+          var ei = +ed.getAttribute("data-i"), ex = state.samples[ei];
+          if (ex) { ex.product = (($("ed-prod") || {}).value || "").trim() || ex.product; ex.client = (($("ed-cli") || {}).value || "").trim() || ex.client; ex.due = (($("ed-due") || {}).value || "").trim(); save(); closeModal($("kb-edit-modal")); renderJournal(); toast(ex.id + " изменён"); }
+        }
         return;
       }
       var ins = e.target.closest("[data-instr]");

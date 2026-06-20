@@ -98,6 +98,9 @@ body.kb{background:#f4f5f7;color:var(--ink);margin:0}
 
 /* пустые состояния */
 .kb-empty{padding:26px 18px;text-align:center;color:var(--muted);font-size:14px;background:#fafbfc;border:1px dashed var(--line);border-radius:12px}
+/* тулбар журнала: поиск + CSV */
+.kb-jtools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.kb-jtools input{flex:1 1 280px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit}
 
 /* кнопки-«призраки» и вторичные действия в журнале */
 .kb-mini.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:7px 8px}
