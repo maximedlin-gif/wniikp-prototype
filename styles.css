@@ -448,6 +448,8 @@ body.vi b,body.vi strong,body.vi label,body.vi .muted,body.vi .kicker,body.vi .l
 body.vi .stat .n,body.vi .stat .l,body.vi .tag,body.vi .more,body.vi .eyebrow,
 body.vi .brand .bt,body.vi .brand .bs,body.vi figcaption,body.vi .clabel{color:var(--vf)!important}
 body.vi a{text-decoration:underline!important}
+/* карточки услуг — блоки-кнопки с рамкой, текст не подчёркиваем даже в VI-режиме */
+body.vi .popcard,body.vi .popcard b,body.vi .popcard span{text-decoration:none!important}
 body.vi .a11y-toggle{background:var(--vb)!important;color:var(--vf)!important;border-color:var(--vf)!important}
 body.vi .a11y-toggle .ic{color:var(--vf)!important}
 body.vi .btn{background:var(--vb)!important;color:var(--vf)!important;border:2px solid var(--vf)!important;box-shadow:none!important}
