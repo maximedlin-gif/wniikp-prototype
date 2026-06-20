@@ -74,6 +74,26 @@ button{font-family:inherit;cursor:pointer}
 /* контакты в карточке заявки */
 .kv-contacts{text-align:right;font-size:13px}
 .kv-contacts a{color:var(--red);font-weight:600}
+/* drag&drop канбана */
+.lead[draggable="true"]{cursor:grab}
+.lead.dragging{opacity:.45}
+.kcol.drop-target{outline:2px dashed var(--red);outline-offset:-2px;background:#e8edf4}
+/* таймлайн заявки */
+.lead-tl{background:#f6f8fb;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin:14px 0}
+.lead-tl .tl-t{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px}
+.lead-tl .tl-t .ic{width:15px;height:15px;color:var(--red)}
+.tl-row{display:flex;gap:10px;font-size:13px;padding:5px 0;border-left:2px solid var(--line);padding-left:12px;margin-left:4px}
+.tl-row .tl-d{color:var(--muted);flex:0 0 44px;font-weight:600}
+.tl-row .tl-m{flex:1}
+.tl-row .tl-w{color:var(--muted);font-size:12px}
+/* сквозной поток заказа */
+.of-wrap{margin:14px 0;padding:12px 14px;background:#f6f8fb;border:1px solid var(--line);border-radius:11px}
+.of-t{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:9px}
+.order-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.of-step{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:#e9edf2;color:var(--muted)}
+.of-step.done{background:var(--good-soft);color:var(--good)}
+.of-arrow{color:#aab4be;font-size:12px}
+.of-link{display:inline-block;margin-top:11px;font-weight:700;color:var(--red);font-size:13px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .kpi .lab{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
 .kpi .val{font-size:27px;font-weight:800;margin-top:6px;letter-spacing:-.5px}

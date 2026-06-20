@@ -157,11 +157,37 @@ function leadsTable(rows){if(!rows.length)return '<div class="empty">Заяво�
  rows.map(function(l){return '<tr data-lead="'+l.id+'" tabindex="0"><td>'+l.id+'</td><td>'+esc(l.client)+'</td><td>'+esc(l.service)+'</td><td>'+esc(l.mgr)+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table>';}
 function leadsKanban(editable){var cols=['new','work','bill','paid','done'];
  return '<div class="kanban">'+cols.map(function(c){var it=DATA.leads.filter(function(l){return l.status===c;});
-  var cards=it.length?it.map(function(l){return '<div class="lead'+(leadHot(l)?' hot':'')+'" data-lead="'+l.id+'" tabindex="0" role="button" aria-label="Заявка '+l.id+', '+esc(l.client)+'"><div class="cl">'+esc(l.client)+'</div><div class="sv">'+esc(l.service)+'</div><div class="am">'+money(l.amount)+'</div>'+agePill(l)+'</div>';}).join(''):'<div class="kempty">пусто</div>';
-  return '<div class="kcol"><h4>'+STATUS[c][1]+'<span>'+it.length+'</span></h4>'+cards+'</div>';}).join('')+'</div>';}
+  var cards=it.length?it.map(function(l){return '<div class="lead'+(leadHot(l)?' hot':'')+'"'+(editable?' draggable="true"':'')+' data-lead="'+l.id+'" tabindex="0" role="button" aria-label="Заявка '+l.id+', '+esc(l.client)+'"><div class="cl">'+esc(l.client)+'</div><div class="sv">'+esc(l.service)+'</div><div class="am">'+money(l.amount)+'</div>'+agePill(l)+'</div>';}).join(''):'<div class="kempty">пусто</div>';
+  return '<div class="kcol" data-status="'+c+'"><h4>'+STATUS[c][1]+'<span>'+it.length+'</span></h4>'+cards+'</div>';}).join('')+'</div>';}
+function dragSetStatus(id,ns){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l||l.status===ns)return;
+ var who=ROLES[state.role].who, permMap={bill:'bill',paid:'paid',done:'act'};
+ if(permMap[ns]&&!can(permMap[ns])){toast('Недостаточно прав для статуса «'+STATUS[ns][1]+'»');go();return;}
+ l.status=ns;
+ if(ns==='bill')l.billBy=l.billBy||who;
+ if(ns==='paid'){l.paidDate=l.paidDate||'09.06';l.paidBy=l.paidBy||who;}
+ if(ns==='done'){l.act=true;l.actBy=l.actBy||who;}
+ logLeadEvent(l,who,'Перемещена в «'+STATUS[ns][1]+'» (перетаскивание)');
+ logAct(who,'заявка '+id+' → '+STATUS[ns][1]+' (drag&drop)');
+ go();toast('Заявка '+id+' → '+STATUS[ns][1]);}
 function mLeads(role){var ro=(role==='director');
  return '<div class="panel" style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><b>Воронка продаж</b><span class="muted">кликните заявку → действия</span>'+(ro?'<span class="hint">режим просмотра</span>':'<button class="btn btn-primary" style="margin-left:auto" data-act="new-lead">+ Новая заявка</button>')+'</div>'+leadsKanban(!ro);}
 
+function mContracts(){
+ var deals=DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;});
+ if(!deals.length) return '<div class="panel"><h3>'+ic('i-content')+'Журнал договоров</h3><div class="empty">Договоров пока нет.</div></div>';
+ var st={bill:'счёт выставлен',paid:'оплачен',done:'закрыт актом'};
+ var rows=deals.map(function(l){return '<tr><td>Д-'+l.id.slice(2)+'</td><td>'+(l.billDate||l.date||'—')+'</td><td>'+esc(l.client)+'</td><td>'+esc(l.service)+'</td><td>'+vatShort(l)+'</td><td>'+st[l.status]+'</td><td>'+(l.dueDate||'—')+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('');
+ return '<div class="panel"><h3>'+ic('i-content')+'Журнал договоров<span class="hint">'+deals.length+' '+plural(deals.length,'договор','договора','договоров')+'</span></h3><table class="tbl"><tr><th>Договор</th><th>Дата</th><th>Заказчик</th><th>Предмет</th><th>НДС</th><th>Статус</th><th>Срок оплаты</th><th class="num">Сумма</th></tr>'+rows+'</table></div>';
+}
+function debtorAging(){
+ var bills=DATA.leads.filter(function(l){return l.status==='bill';});
+ if(!bills.length) return '';
+ var overdue=0,total=0;
+ var rows=bills.map(function(l){var due=adoy(l.dueDate); var od=(due!=null&&due<ADMIN_TODAY)?(ADMIN_TODAY-due):0; total+=l.amount; if(od)overdue+=l.amount;
+  return '<tr'+(od?' class="risk-row"':'')+'><td>СЧ-'+l.id.slice(2)+'</td><td>'+esc(l.client)+'</td><td>'+(l.billDate||'—')+'</td><td>'+(l.dueDate||'—')+'</td><td>'+(od?'<span class="lead-age hot">просрочено '+od+' '+plural(od,'день','дня','дней')+'</span>':'<span class="doc-ok">в срок</span>')+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('');
+ var head=overdue?'<div class="risk-head bad">'+ic('i-fin')+' Просроченная дебиторка: <b>'+money(overdue)+'</b> из '+money(total)+' ожидающих оплаты':'<div class="risk-head ok">'+ic('i-check')+' Просроченной дебиторки нет';
+ return '<div class="panel"><h3>'+ic('i-fin')+'Дебиторка по срокам<span class="hint">неоплаченные счета</span></h3>'+head+'</div><table class="tbl"><tr><th>Счёт</th><th>Заказчик</th><th>Дата счёта</th><th>Срок оплаты</th><th>Состояние</th><th class="num">Сумма</th></tr>'+rows+'</table></div>';
+}
 function mFinance(role){
  if(state.finView==='report') return finReport(role);
  var paid=paidLeads();
@@ -170,7 +196,7 @@ function mFinance(role){
   '<div class="panel"><h3>'+ic('i-fin')+'Динамика выручки, тыс. ₽</h3>'+lineChart(DATA.revMonths)+'</div>'+
   '<div class="panel"><h3>'+ic('i-report')+'Счета и оплаты<span class="hint"><button class="btn btn-ghost" data-act="csv-invoices">Экспорт CSV</button></span></h3>'+
    '<table class="tbl"><tr><th>Счёт</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th class="num">Сумма</th></tr>'+
-   DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;}).map(function(l){return '<tr><td>СЧ-'+l.id.slice(2)+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table></div>';
+   DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;}).map(function(l){return '<tr><td>СЧ-'+l.id.slice(2)+'</td><td>'+l.client+'</td><td>'+l.service+'</td><td>'+sb(l.status)+'</td><td class="num">'+money(l.amount)+'</td></tr>';}).join('')+'</table></div>'+debtorAging()+mContracts();
 }
 function dealReady(l){ // комплектность первички по сделке
  var schet=['bill','paid','done'].indexOf(l.status)>-1;
@@ -329,6 +355,23 @@ function lbtn(kind,act,id,label){return '<button class="btn btn-'+kind+'" data-a
 function permHint(t){return '<span class="perm-hint">'+ic('i-shield')+' '+t+'</span>';}
 function contactLinks(l){var p=[]; if(l.phone)p.push('<a href="tel:'+l.phone.replace(/[^+\d]/g,'')+'">'+esc(l.phone)+'</a>'); if(l.email)p.push('<a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a>'); return p.length?p.join('<br>'):'<span class="muted">не указаны</span>';}
 function updateLeadBadge(){var a=document.querySelector('.menu a[data-mod="leads"]'); if(!a)return; var old=a.querySelector('.menu-badge'); if(old)old.remove(); var n=DATA.leads.filter(function(l){return l.status==='new'&&!l.seen;}).length; if(n)a.insertAdjacentHTML('beforeend','<span class="menu-badge">'+n+'</span>');}
+function logLeadEvent(l,who,msg){ l.events=l.events||[]; l.events.push({t:'09.06',who:who,msg:msg}); }
+function synthEvents(l){var ev=[]; ev.push({t:l.date,who:l.mgr,msg:'Заявка поступила'}); if(l.billDate)ev.push({t:l.billDate,who:l.billBy||l.mgr,msg:'Выставлен счёт'}); if(l.paidDate)ev.push({t:l.paidDate,who:l.paidBy||'Бухгалтерия',msg:'Поступила оплата'}); if(l.act)ev.push({t:l.paidDate||l.date,who:l.actBy||'Бухгалтерия',msg:'Сформирован акт, сделка закрыта'}); return ev;}
+function leadTimeline(l){var ev=(l.events&&l.events.length)?l.events:synthEvents(l); if(!ev.length)return ''; return '<div class="lead-tl"><div class="tl-t">'+ic('i-report')+' История заявки</div>'+ev.map(function(e){return '<div class="tl-row"><span class="tl-d">'+esc(e.t||'')+'</span><span class="tl-m">'+esc(e.msg)+'</span><span class="tl-w">'+esc(e.who||'')+'</span></div>';}).join('')+'</div>';}
+// сквозной поток: передача заявки реальным образцом в кабинет лаборатории (общий localStorage одного origin)
+function pushToKabinet(l){
+ try{ var KK='wniikp_kabinet_v7', raw=localStorage.getItem(KK); if(!raw)return false; var st=JSON.parse(raw); if(!st||!st.samples)return false;
+  var n=st.samples.length+101, sid='К-'+n, s=String(l.service||'').toLowerCase();
+  var lab=/шоколад|идентифик|мармелад/.test(s)?'choc':/микроб|кмафанм|партии/.test(s)?'micro':/жир|хромат|перекис|аналог/.test(s)?'chrom':/мучн|вафл|печень|пряник/.test(s)?'flour':'physchem';
+  st.samples.push({id:sid,lab:lab,date:'09.06',due:'16.06',product:l.service,client:l.client,tests:[l.service],status:'new',fromLead:l.id});
+  localStorage.setItem(KK,JSON.stringify(st)); return sid;
+ }catch(e){return false;}
+}
+function orderFlow(l){
+ var stages=[['Заявка',true],['Счёт',['bill','paid','done'].indexOf(l.status)>-1],['В лаборатории',!!l.toLab],['Оплата',['paid','done'].indexOf(l.status)>-1],['Акт',!!l.act]];
+ var link=l.kabinetSampleId?'<a class="of-link" href="../kabinet.html" target="_blank">Открыть образец '+esc(l.kabinetSampleId)+' в кабинете лаборатории →</a>':'';
+ return '<div class="of-wrap"><div class="of-t">Сквозной поток заказа</div><div class="order-flow">'+stages.map(function(s,i){return (i?'<span class="of-arrow">→</span>':'')+'<span class="of-step'+(s[1]?' done':'')+'">'+esc(s[0])+'</span>';}).join('')+'</div>'+link+'</div>';
+}
 function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l)return;
  if(!l.seen){l.seen=true;saveData();updateLeadBadge();}
  var acts='';
@@ -352,7 +395,7 @@ function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(
   '<div class="sod-r"><span>Оплату подтвердил</span><b>'+esc(l.paidBy||'—')+'</b></div>'+
   '<div class="sod-r"><span>Акт сформировал</span><b>'+esc(l.actBy||'—')+'</b></div></div>';
  var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#586673">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
- openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+ctl+notes+'<div class="btnrow">'+acts+'</div></div>');
+ openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+orderFlow(l)+ctl+leadTimeline(l)+notes+'<div class="btnrow">'+acts+'</div></div>');
 }
 function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
  openDrawer('<div class="dh"><div><h3>Ответ клиенту</h3><div class="muted" style="font-size:13px">'+l.client+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Сообщение</label><textarea id="replyTxt" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit" placeholder="Здравствуйте! По вашей заявке…"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="lead-send" data-id="'+id+'">Отправить</button><button class="btn btn-ghost" data-act="lead-open" data-id="'+id+'">Назад</button></div></div>');}
@@ -378,11 +421,11 @@ document.addEventListener('click',function(e){
   case 'close': closeDrawer(); break;
   case 'lead-open': openLead(id); break;
   case 'lead-reply': replyForm(id); break;
-  case 'lead-send': var v=(document.getElementById('replyTxt')||{}).value||''; if(v.trim()){L.notes.push('Вы: '+v.trim());logAct(who,'ответ клиенту по '+id);toast('Ответ отправлен клиенту');} openLead(id); break;
-  case 'lead-bill': if(!can('bill')){toast('Недостаточно прав: счёт выставляет '+whoDoes('bill'));break;} L.status='bill';L.billBy=who;logAct(who,'выставлен счёт по '+id);closeDrawer();go();toast('Счёт выставлен по '+id); break;
-  case 'lead-paid': if(!can('paid')){toast('Недостаточно прав: оплату подтверждает '+whoDoes('paid'));break;} L.status='paid';L.paidDate='07.06';L.paidBy=who;logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
-  case 'lead-act': { if(!can('act')){toast('Недостаточно прав: акт формирует '+whoDoes('act'));break;} var snapA=JSON.parse(JSON.stringify(L)); L.status='done';L.act=true;L.actBy=who;logAct(who,'сформирован акт по '+id);closeDrawer();go(); toast._undo=function(){var ix=DATA.leads.findIndex(function(x){return x.id===id;}); if(ix>-1)DATA.leads[ix]=snapA; logAct(who,'отменён акт по '+id); go(); toast('Действие отменено');}; toast('Акт сформирован, сделка закрыта','Отменить'); break; }
-  case 'lead-tolab': if(!can('tolab')){toast('Недостаточно прав: передаёт в лабораторию '+whoDoes('tolab'));break;} DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'});logAct(who,'заявка '+id+' передана в лабораторию');closeDrawer();go();toast('Передано в лабораторию (создано задание)'); break;
+  case 'lead-send': var v=(document.getElementById('replyTxt')||{}).value||''; if(v.trim()){L.notes.push('Вы: '+v.trim());logLeadEvent(L,who,'Ответ клиенту');logAct(who,'ответ клиенту по '+id);toast('Ответ отправлен клиенту');} openLead(id); break;
+  case 'lead-bill': if(!can('bill')){toast('Недостаточно прав: счёт выставляет '+whoDoes('bill'));break;} L.status='bill';L.billBy=who;L.billDate=L.billDate||'09.06';L.dueDate=L.dueDate||'16.06';logLeadEvent(L,who,'Выставлен счёт');logAct(who,'выставлен счёт по '+id);closeDrawer();go();toast('Счёт выставлен по '+id); break;
+  case 'lead-paid': if(!can('paid')){toast('Недостаточно прав: оплату подтверждает '+whoDoes('paid'));break;} L.status='paid';L.paidDate='09.06';L.paidBy=who;logLeadEvent(L,who,'Поступила оплата');logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
+  case 'lead-act': { if(!can('act')){toast('Недостаточно прав: акт формирует '+whoDoes('act'));break;} var snapA=JSON.parse(JSON.stringify(L)); L.status='done';L.act=true;L.actBy=who;logLeadEvent(L,who,'Сформирован акт, сделка закрыта');logAct(who,'сформирован акт по '+id);closeDrawer();go(); toast._undo=function(){var ix=DATA.leads.findIndex(function(x){return x.id===id;}); if(ix>-1)DATA.leads[ix]=snapA; logAct(who,'отменён акт по '+id); go(); toast('Действие отменено');}; toast('Акт сформирован, сделка закрыта','Отменить'); break; }
+  case 'lead-tolab': { if(!can('tolab')){toast('Недостаточно прав: передаёт в лабораторию '+whoDoes('tolab'));break;} DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'}); L.toLab=true; var sid=pushToKabinet(L); if(sid)L.kabinetSampleId=sid; logLeadEvent(L,who,'Передана в лабораторию'+(sid?' (образец '+sid+')':'')); logAct(who,'заявка '+id+' передана в лабораторию'+(sid?', создан образец '+sid:'')); closeDrawer();go(); toast(sid?('Передано — образец '+sid+' создан в кабинете лаборатории'):'Передано в лабораторию (создано задание)'); break; }
   case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Телефон</label><input id="nlp" placeholder="+7 (___) ___-__-__"></div><div class="fld"><label>E-mail</label><input id="nle" type="email" placeholder="client@example.ru"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
   case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0,ph=(document.getElementById('nlp')||{}).value,em=(document.getElementById('nle')||{}).value; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,phone:ph,email:em,service:s||'—',amount:am,status:'new',mgr:who,date:'09.06',notes:[],events:[],seen:true});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
   case 'lab-done': var t=DATA.lab.find(function(x){return x.id===id;}); if(t){t.status='done';logAct(who,'загружен протокол '+id);} go();toast('Протокол загружен, задание выполнено'); break;
@@ -443,6 +486,14 @@ document.addEventListener('dragstart',function(e){var c=e.target.closest&&e.targ
 document.addEventListener('dragover',function(e){var c=e.target.closest&&e.target.closest('.holcard'); if(!c||!dragKey)return; e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){} var l=document.querySelectorAll('.holcard.drag-over'); for(var i=0;i<l.length;i++)if(l[i]!==c)l[i].classList.remove('drag-over'); if(c.getAttribute('data-id')!==dragKey)c.classList.add('drag-over');});
 document.addEventListener('drop',function(e){var c=e.target.closest&&e.target.closest('.holcard'); if(!c||!dragKey)return; e.preventDefault(); var toKey=c.getAttribute('data-id'); if(toKey!==dragKey){var r=c.getBoundingClientRect(); var after=e.clientY>(r.top+r.height/2); moveHoliday(dragKey,toKey,after); var who=state.role?ROLES[state.role].who:'—'; logAct(who,'изменён порядок праздников'); dragKey=null; clearDnd(); go(); toast('Порядок обновлён');} else {dragKey=null; clearDnd();}});
 document.addEventListener('dragend',function(){dragKey=null; clearDnd();});
+
+// drag-and-drop заявок между колонками канбана
+var dragLead=null;
+function clearLeadDnd(){document.querySelectorAll('.kcol.drop-target,.lead.dragging').forEach(function(x){x.classList.remove('drop-target');x.classList.remove('dragging');});}
+document.addEventListener('dragstart',function(e){var c=e.target.closest&&e.target.closest('.lead[draggable="true"]'); if(!c)return; dragLead=c.getAttribute('data-lead'); c.classList.add('dragging'); try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragLead);}catch(_){}});
+document.addEventListener('dragover',function(e){var col=e.target.closest&&e.target.closest('.kcol'); if(!col||!dragLead)return; e.preventDefault(); document.querySelectorAll('.kcol.drop-target').forEach(function(x){if(x!==col)x.classList.remove('drop-target');}); col.classList.add('drop-target');});
+document.addEventListener('drop',function(e){var col=e.target.closest&&e.target.closest('.kcol'); if(!col||!dragLead)return; e.preventDefault(); var ns=col.getAttribute('data-status'),id=dragLead; dragLead=null; clearLeadDnd(); if(ns)dragSetStatus(id,ns);});
+document.addEventListener('dragend',function(){dragLead=null; clearLeadDnd();});
 
 try{ if(localStorage.getItem('wniikp_admin_vi')==='1') document.body.classList.add('vi'); }catch(_){}
 var _rp=(location.search.match(/[?&]role=([a-z_]+)/)||[])[1];

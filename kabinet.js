@@ -125,6 +125,7 @@
   if (!state || !state.samples) state = JSON.parse(JSON.stringify(SEED));
   if (!state.lab) state.lab = "all";
   if (!state.instruments) state.instruments = JSON.parse(JSON.stringify(DEFAULT_INSTR));
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} // персист при загрузке — нужно для сквозной связи с управленческой
   var undo = null; // последнее обратимое действие
 
   /* доступность прибора для планирования: ремонт / просроченная поверка / готов */
