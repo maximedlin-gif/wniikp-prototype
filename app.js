@@ -486,4 +486,35 @@ document.addEventListener('click', e=>{
   if(dl&&cms.docs){var idc=pub(cms.docs); if(idc.length) dl.innerHTML=idc.map(function(x){var li=(x.list||'').split('\n').map(function(s){return s.trim();}).filter(Boolean).map(function(s){return '<li>'+esc(s)+'</li>';}).join(''); return '<div class="scn"><h3><svg class="ic" aria-hidden="true"><use href="#'+(x.icon||'ico-doc')+'"></use></svg> '+esc(x.title)+'</h3><ul class="pkg">'+li+'</ul></div>';}).join('');}
   var pbl=document.getElementById('pubsList');
   if(pbl&&cms.pubs){var ipb=pub(cms.pubs); if(ipb.length){var byY={},ord=[]; ipb.forEach(function(x){var y=x.year||'—'; if(!byY[y]){byY[y]=[];ord.push(y);} byY[y].push(x);}); ord.sort(function(a,b){return String(b).localeCompare(String(a));}); pbl.innerHTML=ord.map(function(y){return '<div class="section-head" style="margin:18px 0 2px"><div class="kicker">'+esc(y)+' год</div></div><ol class="publist">'+byY[y].map(function(x){return '<li><b>«'+esc(x.title)+'»</b><span>'+esc(x.source||'')+'</span></li>';}).join('')+'</ol>';}).join('');}}
+  function semHtml(x){
+    var lines=function(s){return (s||'').split('\n').map(function(t){return t.trim();}).filter(Boolean);};
+    var skills=lines(x.skills).map(function(s){return '<li>'+esc(s)+'</li>';}).join('');
+    var prog=lines(x.program).map(function(s){return '<li>'+esc(s).replace(/^(.*?\.)\s/,'<b>$1</b> ')+'</li>';}).join('');
+    var badge=x.badge?'<span class="badge'+(x.badgeAmber===true||x.badgeAmber==='true'?' amber':'')+'">'+esc(x.badge)+'</span>':'';
+    var ti=x.titleIcon?'<svg class="ic" aria-hidden="true"><use href="#'+esc(x.titleIcon)+'"></use></svg> ':'';
+    return '<div class="sem"'+(x.anchor?' id="'+esc(x.anchor)+'"':'')+'><div class="top">'+badge
+      +'<h3 style="margin-top:12px">'+ti+esc(x.title)+'</h3>'
+      +'<div class="meta"><span><svg class="ic" aria-hidden="true"><use href="#ico-calendar"></use></svg> '+esc(x.dates)+'</span>'
+      +'<span><svg class="ic" aria-hidden="true"><use href="#'+(x.midIcon||'ico-clock')+'"></use></svg> '+esc(x.mid)+'</span>'
+      +'<span><svg class="ic" aria-hidden="true"><use href="#ico-ruble"></use></svg> '+esc(x.price)+'</span></div></div>'
+      +'<div class="body">'+(x.audience?'<p class="muted" style="font-size:14px">'+esc(x.audience)+'</p>':'')
+      +'<h4>Чему вы научитесь</h4><ul class="skills">'+skills+'</ul>'
+      +(prog?'<details class="prog"><summary>'+esc(x.progLabel||'Программа по дням')+'</summary><ul class="pdays">'+prog+'</ul></details>':'')
+      +(x.doc?'<div class="doc"><svg class="ic" aria-hidden="true"><use href="#ico-cap"></use></svg> '+esc(x.doc)+'</div>':'')
+      +'<div class="foot"><span class="muted" style="font-size:13px">'+esc(x.format)+'</span><a class="btn btn-primary" href="#zapis">Записаться</a></div></div></div>';
+  }
+  var col=document.getElementById('courseList');
+  if(col&&cms.courses){var cb=pub(cms.courses).filter(function(x){return (x.group||'base')!=='remeslo';}); if(cb.length) col.innerHTML=cb.map(semHtml).join('');}
+  var colr=document.getElementById('courseListR');
+  if(colr&&cms.courses){var cr=pub(cms.courses).filter(function(x){return x.group==='remeslo';}); if(cr.length) colr.innerHTML=cr.map(semHtml).join('');}
+  function bookHtml(x){
+    var cst=(x.coverDark===true||x.coverDark==='true')?' style="background:linear-gradient(135deg,#102d47,#16456b)"':'';
+    var cover='<div class="book-cover"'+cst+'><svg class="ic" aria-hidden="true"><use href="#'+esc(x.icon||'ico-book')+'"></use></svg><span class="book-type">'+esc(x.typeName)+'</span></div>';
+    var foot;
+    if(x.paid==='paid'){foot='<span class="price paid">'+esc(x.price)+'</span><button class="btn btn-primary" data-lib="buy" data-title="'+esc(x.buyTitle||x.title)+'"><svg class="ic" aria-hidden="true"><use href="#ico-ruble"></use></svg> '+esc(x.actionLabel||'Купить')+'</button>';}
+    else{var ai=x.actionType==='read'?'ico-doc':'ico-download';var aa=x.actionType==='read'?' target="_blank" rel="noopener"':' download';foot='<span class="price free">Бесплатно</span><a class="btn btn-ghost" href="'+esc(x.file||'#')+'"'+aa+'><svg class="ic" aria-hidden="true"><use href="#'+ai+'"></use></svg> '+esc(x.actionLabel||'Скачать PDF')+'</a>';}
+    return '<article class="book" data-paid="'+esc(x.paid)+'" data-type="'+esc(x.type)+'">'+cover+'<div class="book-body"><h3>'+esc(x.title)+'</h3><p class="book-auth">'+esc(x.author)+'</p><div class="book-foot">'+foot+'</div></div></article>';
+  }
+  var bg=document.querySelector('.book-grid');
+  if(bg&&cms.books){var ib=pub(cms.books); if(ib.length) bg.innerHTML=ib.map(bookHtml).join('');}
 })();
