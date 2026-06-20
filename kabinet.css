@@ -179,6 +179,11 @@ body.kb.vi .kb-mini,body.kb.vi .kb-tab{border-width:2px}
 body.kb.vi .kb-cell.free{color:#5a6470}
 
 @media (max-width:880px){.kb-kpis{grid-template-columns:repeat(2,1fr)}.kb-grid2{grid-template-columns:1fr}.kb-table .kb-tests{display:none}}
+@media (max-width:760px){
+  #kb-journal,#kb-cal{overflow-x:auto}
+  .kb-table,.kb-cal-tab{min-width:560px}
+  .kb-jtools input{flex:1 1 100%}
+}
 
 /* печать: только протокол */
 @media print{
