@@ -229,6 +229,9 @@
     }
   ];
 
+  // Если каталог отредактирован в админке (тот же браузер) — берём его; иначе встроенный официальный список.
+  try { var _adm = JSON.parse(localStorage.getItem("wniikp_admin_v1") || "null"); if (_adm && Array.isArray(_adm.catalog) && _adm.catalog.length) DATA = _adm.catalog; } catch (e) {}
+
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
   var root = document.getElementById("svcCatalog");
@@ -239,8 +242,10 @@
     filter = (filter || "").trim().toLowerCase();
     var html = "", total = 0, shown = 0;
     DATA.forEach(function (d) {
+      if (d.hidden) return;
       var body = "", dCount = 0, dShown = 0;
       d.groups.forEach(function (g) {
+        if (g.hidden) return;
         var rows = "";
         g.items.forEach(function (it) {
           total++; dCount++;
