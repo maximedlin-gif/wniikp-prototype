@@ -66,6 +66,8 @@
     if (v - u > lim)  return { cls: "fail", txt: "не соответствует" };
     return { cls: "border", txt: "на границе" };
   }
+  // глиф к вердикту, чтобы значение не передавалось ТОЛЬКО цветом (дальтоники, скринридеры)
+  function vico(cls) { return { pass: "✓ ", fail: "✕ ", border: "≈ ", na: "" }[cls] || ""; }
   function sampleVerdict(x) {
     var measured = (x.tests || []).map(parseTest).filter(function (t) { return t.val != null; });
     if (!measured.length) return null;
@@ -136,7 +138,7 @@
   }
   function instrById(id) { return state.instruments.filter(function (x) { return x.id === id; })[0]; }
   function fmtDate(iso) { var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : iso; }
-  var NOW_DATE = "20.06.2026"; // демо-«сегодня» для записей в историю
+  var NOW_DATE = "10.06.2026"; // демо-«сегодня» (синхронизировано с TODAY_KB=10.06 и admin.js ADMIN_TODAY)
   function monthsUntil(till) { var m = String(till || "").match(/(\d{2})\.(\d{4})/); if (!m) return null; return (+m[2] - 2026) * 12 + (+m[1] - 6); } // относительно июня 2026
   function verifyWarn(i) { if (i.status === "repair") return false; var mu = monthsUntil(i.verifiedTill); return mu != null && mu >= 0 && mu <= 2; }
   function curLab() { return state.lab || "all"; }
@@ -158,12 +160,13 @@
     } catch (e) {}
   }
   function $(id) { return document.getElementById(id); }
+  function debounce(fn, ms) { var t; return function () { var a = arguments, c = this; clearTimeout(t); t = setTimeout(function () { fn.apply(c, a); }, ms || 180); }; }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-  function empty(msg) { return '<div class="kb-empty">' + esc(msg) + "</div>"; }
+  function empty(msg, btn) { return '<div class="kb-empty">' + esc(msg) + (btn ? '<div style="margin-top:12px">' + btn + "</div>" : "") + "</div>"; }
 
   /* всплывающая подсказка с возможностью отмены */
   function toast(msg, undoLabel) {
-    var t = $("kb-toast"); if (!t) { t = document.createElement("div"); t.id = "kb-toast"; t.className = "kb-toast"; document.body.appendChild(t); }
+    var t = $("kb-toast"); if (!t) { t = document.createElement("div"); t.id = "kb-toast"; t.className = "kb-toast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); document.body.appendChild(t); }
     t.innerHTML = esc(msg) + (undoLabel ? ' <button type="button" class="kb-undo">' + esc(undoLabel) + "</button>" : "");
     t.classList.add("show");
     clearTimeout(toast._); toast._ = setTimeout(function () { t.classList.remove("show"); }, 5000);
@@ -239,7 +242,7 @@
   function badge(st) { var c = { new: "amber", work: "blue", review: "review", done: "green" }[st]; return '<span class="kb-badge ' + c + '">' + STATUS[st] + "</span>"; }
   function resultPill(x) {
     var v = sampleVerdict(x);
-    return v ? '<span class="kb-vres ' + v.cls + '">' + v.txt + "</span>" : "";
+    return v ? '<span class="kb-vres ' + v.cls + '">' + vico(v.cls) + v.txt + "</span>" : "";
   }
   function renderJournal() {
     var visible = state.samples.filter(function (x) { return curLab() === "all" || x.lab === curLab(); });
@@ -262,7 +265,7 @@
     }).join("");
     var table = visible.length
       ? '<table class="kb-table"><thead><tr><th>Образец</th><th>Продукт / заказчик</th><th>Испытания</th><th>Статус</th><th></th></tr></thead><tbody>' + rows + "</tbody></table>"
-      : empty("По выбранной лаборатории образцов нет. Выберите «Все лаборатории» или примите новый образец выше.");
+      : empty("По выбранной лаборатории образцов пока нет. Выберите «Все лаборатории» или примите первый образец.", '<button class="kb-mini primary" id="js-empty-add">Принять первый образец</button>');
     $("kb-journal").innerHTML =
       '<h2>Журнал образцов <span class="kb-sub">(LIMS-lite)</span></h2>' + labInfo() +
       '<div class="kb-box" style="margin-bottom:16px"><h3>Принять образец</h3>' +
@@ -280,13 +283,14 @@
       save(); renderJournal();
       toast("Образец К-" + n + " принят");
     });
+    var ea = $("js-empty-add"); if (ea) ea.addEventListener("click", function () { var p = $("js-prod"); if (p) { p.scrollIntoView({ block: "center" }); p.focus(); } });
     $("kb-journal").querySelectorAll(".kb-mini[data-act]").forEach(function (b) {
       b.addEventListener("click", function () {
         var i = +b.dataset.i, a = b.dataset.act, x = state.samples[i];
         if (a === "work") { x.status = "work"; save(); refresh(); toast(x.id + " — в работе"); }
         else if (a === "result") { openResultModal(i); }
         else if (a === "proto") { showProtocol(x); }
-        else if (a === "approve") { x.status = "done"; x.approvedBy = LAB_HEAD; save(); writeBackToAdmin(x); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
+        else if (a === "approve") { if (!confirm("Утвердить протокол по образцу " + x.id + "?\nПосле утверждения он помечается готовым и отправляется в управленческую систему.")) return; x.status = "done"; x.approvedBy = LAB_HEAD; save(); writeBackToAdmin(x); refresh(); toast(x.id + " утверждён (" + LAB_HEAD + ") — протокол готов"); showProtocol(x); }
         else if (a === "back-new") { x.status = "new"; save(); refresh(); toast(x.id + " возвращён в «Принят»"); }
         else if (a === "edit") { openEditModal(i); }
         else if (a === "del") {
@@ -306,10 +310,10 @@
       });
     });
     var sb = $("js-search");
-    if (sb) sb.addEventListener("input", function () {
+    if (sb) sb.addEventListener("input", debounce(function () {
       var q = sb.value.trim().toLowerCase();
       $("kb-journal").querySelectorAll("tbody tr").forEach(function (tr) { tr.style.display = (!q || tr.textContent.toLowerCase().indexOf(q) > -1) ? "" : "none"; });
-    });
+    }, 180));
     var cb = $("js-csv"); if (cb) cb.addEventListener("click", exportJournalCsv);
   }
   function openEditModal(i) {
@@ -489,11 +493,11 @@
       var v = verdict(t);
       var repInfo = (t.reps && t.reps.length > 1) ? '<div class="kb-sub">n=' + t.reps.length + ", сходимость (размах) " + t.spread + (t.unit ? " " + t.unit : "") + "</div>" : "";
       return "<tr><td>" + (n + 1) + "</td><td>" + esc(t.ind) + '<div class="kb-sub">' + esc(t.nd || "") + "</div></td>" +
-        "<td>" + esc(resText(t)) + repInfo + "</td><td>" + esc(normText(t)) + '</td><td class="r ' + v.cls + '">' + v.txt + "</td></tr>";
+        "<td>" + esc(resText(t)) + repInfo + "</td><td>" + esc(normText(t)) + '</td><td class="r ' + v.cls + '">' + vico(v.cls) + v.txt + "</td></tr>";
     }).join("");
     var sv = sampleVerdict(x);
     var concl = sv
-      ? '<p class="proto-concl"><b>Заключение:</b> по совокупности исследованных показателей образец <b class="kb-vres ' + sv.cls + '">' + sv.txt + "</b> требованиям нормативной документации." +
+      ? '<p class="proto-concl"><b>Заключение:</b> по совокупности исследованных показателей образец <b class="kb-vres ' + sv.cls + '">' + vico(sv.cls) + sv.txt + "</b> требованиям нормативной документации." +
         (sv.cls === "border" ? ' <span class="kb-sub">Один из показателей в зоне неопределённости: результат с учётом расширенной неопределённости U пересекает границу нормы — по решающему правилу однозначное соответствие не подтверждается, требуется повторное определение.</span>' : "") + "</p>"
       : '<p class="proto-concl kb-sub">Числовые результаты ещё не внесены — заключение формируется после ввода значений.</p>';
     $("kb-proto-body").innerHTML =
