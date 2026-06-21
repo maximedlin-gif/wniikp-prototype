@@ -162,7 +162,7 @@ var MOD={dash:['i-dash','Дашборд'],tasks:['i-report','Поручения'
  users:['i-users','Пользователи и права'],reports:['i-report','Отчёты'],holidays:['i-cal','Праздники'],catalog:['i-lab','Каталог услуг']};
 var STATUS={new:['b-new','Новая'],work:['b-work','В работе'],bill:['b-bill','Счёт выставлен'],paid:['b-paid','Оплачено'],done:['b-done','Выполнено']};
 function sb(s){return '<span class="badge '+STATUS[s][0]+'">'+STATUS[s][1]+'</span>';}
-var state={role:null,mod:'dash',finView:'list',uType:'budget',cmsCol:null,catDir:null,catGroup:null};
+var state={role:null,mod:'dash',finView:'list',uType:'budget',cmsCol:null,catDir:null,catGroup:null,finPeriod:'all'};
 var CMS={
  news:{label:'Новости',page:'novosti.html',titleKey:'title',subKey:'date',fields:[{k:'date',l:'Дата (текст)',t:'text',ph:'18–20 мая 2026'},{k:'title',l:'Заголовок',t:'text'},{k:'text',l:'Текст',t:'area'},{k:'linkText',l:'Текст ссылки',t:'text',ph:'Подробнее →'},{k:'linkHref',l:'Адрес ссылки',t:'text',ph:'obuchenie.html'}]},
  cases:{label:'Кейсы',page:'keysy.html',titleKey:'title',subKey:'tag',fields:[{k:'tag',l:'Метка',t:'text',ph:'Сроки годности'},{k:'icon',l:'Иконка',t:'select',opts:[['ico-clock','Часы'],['ico-scan','КТ'],['ico-swap','Замена'],['ico-scales','Весы'],['ico-doc','Документ']]},{k:'title',l:'Заголовок',t:'text'},{k:'problem',l:'Задача',t:'area'},{k:'result',l:'Результат (текст бейджа)',t:'text'}]},
@@ -185,7 +185,7 @@ function resetData(){DATA.leads=JSON.parse(JSON.stringify(DEFAULTS.leads));DATA.
 loadData();
 
 // ---------- НДС и тип учреждения ----------
-function vatOf(l){var s=String(l.service||'').toLowerCase(); if(/обучен/.test(s))return 'none'; if(/маркир|\bту\b|рецептур/.test(s))return '20'; return 'lgota';}
+function vatOf(l){ if(l.vat&&l.vat!=='auto')return l.vat; var s=String(l.service||'').toLowerCase(); if(/обучен/.test(s))return 'none'; if(/маркир|\bту\b|рецептур/.test(s))return '20'; return 'lgota';}
 function vatLabel(l){return {none:'без НДС',20:'НДС 20%',lgota:'льгота п.149 НК'}[vatOf(l)];}
 function vatShort(l){return {none:'—',20:'20%',lgota:'льгота'}[vatOf(l)];}
 function vatAmount(l){return vatOf(l)==='20'?Math.round(l.amount-l.amount/1.2):0;}
@@ -207,6 +207,10 @@ function barList(rows){var max=Math.max.apply(null,rows.map(function(r){return r
 function sum(arr){return arr.reduce(function(a,b){return a+b;},0);}
 function plural(n,one,few,many){var m=n%100,d=n%10; if(m>10&&m<20)return many; if(d===1)return one; if(d>=2&&d<=4)return few; return many;}
 function paidLeads(){return DATA.leads.filter(function(l){return l.status==='paid'||l.status==='done';});}
+var FINPERIODS=[['all','Весь период'],['q2-26','II квартал 2026'],['jun26','Июнь 2026'],['may26','Май 2026']];
+function periodLabel(){var p=state.finPeriod||'all';for(var i=0;i<FINPERIODS.length;i++)if(FINPERIODS[i][0]===p)return FINPERIODS[i][1];return 'весь период';}
+function leadMonth(l){var d=String(l.paidDate||l.billDate||l.date||'').match(/(\d{1,2})\.(\d{1,2})/);return d?+d[2]:null;}
+function inFinPeriod(l){var p=state.finPeriod||'all'; if(p==='all')return true; var m=leadMonth(l); if(m==null)return false; if(p==='jun26')return m===6; if(p==='may26')return m===5; if(p==='q2-26')return m>=4&&m<=6; return true;}
 function factRevenue(){return sum(paidLeads().map(function(l){return l.amount;}))+1610000;}
 
 // сроки/просрочки. Единая демо-«сегодня» — 10 июня 2026 (синхронизировано с kabinet.js: TODAY_KB=10.06, NOW_DATE=10.06.2026)
@@ -321,8 +325,8 @@ function dealReady(l){ // комплектность первички по сд�
  return {dogovor:true,schet:schet,oplata:oplata,akt:akt,ok:gaps.length===0,gaps:gaps};
 }
 function svetofor(){
- var deals=DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;});
- if(!deals.length) return '<div class="panel"><h3>'+ic('i-shield')+'Светофор готовности к проверке</h3><div class="empty">Нет сделок с движением по доходам.</div></div>';
+ var deals=DATA.leads.filter(function(l){return ['bill','paid','done'].indexOf(l.status)>-1;}).filter(inFinPeriod);
+ if(!deals.length) return '<div class="panel"><h3>'+ic('i-shield')+'Светофор готовности к проверке</h3><div class="empty">За период «'+periodLabel()+'» сделок с движением по доходам нет.</div></div>';
  var risk=0, bad=0;
  var ck=function(v){return v?'<span class="doc-ok">'+ic('i-check')+'</span>':'<span class="doc-no">нет</span>';};
  var body=deals.map(function(l){var r=dealReady(l); if(!r.ok){risk+=l.amount;bad++;}
@@ -332,7 +336,7 @@ function svetofor(){
   '<table class="tbl svetofor"><tr><th>Сделка</th><th>Заказчик</th><th>Договор</th><th>Счёт</th><th>Акт</th><th>Оплата</th><th>КФО/КОСГУ</th><th>НДС</th><th class="num">Сумма</th><th>Готовность</th></tr>'+body+'</table></div>';
 }
 function finReport(role){
- var rows=paidLeads();
+ var rows=paidLeads().filter(inFinPeriod);
  var fact=sum(rows.map(function(l){return l.amount;}));
  var totalVat=sum(rows.map(vatAmount));
  var closed=rows.filter(function(l){return l.act;}).length;
@@ -343,8 +347,9 @@ function finReport(role){
   '<tr><td colspan="9"><b>Итого доходов от платных услуг (подстатья 131, счёт 205.31)</b></td><td class="num"><b>'+money(fact)+'</b></td></tr>'+
   '<tr><td colspan="9">в т.ч. НДС к уплате (по облагаемым услугам)</td><td class="num">'+money(totalVat)+'</td></tr></table>'):'<div class="empty">Оплаченных доходов пока нет — реестр пуст.</div>';
  var trail='<table class="tbl"><tr><th>Время</th><th>Пользователь</th><th>Действие</th></tr>'+LOG.slice(0,8).map(function(e){return '<tr><td>'+e.t+'</td><td>'+e.who+'</td><td>'+esc(e.msg)+'</td></tr>';}).join('')+'</table>';
+ var pSel='<span class="hint">Период: <select id="finPeriodSel">'+FINPERIODS.map(function(p){return '<option value="'+p[0]+'"'+(state.finPeriod===p[0]?' selected':'')+'>'+p[1]+'</option>';}).join('')+'</select></span>';
  var uSel='<span class="hint">Тип учреждения: <select id="uTypeSel"><option value="budget"'+(state.uType!=='kazna'?' selected':'')+'>Бюджетное / автономное</option><option value="kazna"'+(state.uType==='kazna'?' selected':'')+'>Казённое</option></select></span>';
- return '<div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost" data-act="fin-list">← к финансам</button><b>'+ic('i-shield')+' Отчёт для контроля (Счётная палата / учредитель)</b><span class="hint">июнь 2026 · приносящая доход деятельность</span>'+uSel+'</div>'+
+ return '<div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost" data-act="fin-list">← к финансам</button><b>'+ic('i-shield')+' Отчёт для контроля (Счётная палата / учредитель)</b><span class="hint">'+esc(periodLabel())+' · приносящая доход деятельность</span>'+pSel+uSel+'</div>'+
   svetofor()+
   '<div class="ctrl-cards">'+
    ctrlCard('Кассовые поступления (КФО 2)','подстатья 131 · счёт 205.31',money(fact),'ok')+
@@ -461,7 +466,7 @@ function mUsers(){var rows=[['Дашборд','yes','part','part','part','no','p
  var users='<table class="tbl"><tr><th>Сотрудник</th><th>Роль</th><th>Отдел</th><th>Доступ</th><th>Статус</th><th></th></tr>'+DATA.users.map(function(u,i){var off=u.active===false; return '<tr'+(off?' class="user-off"':'')+'><td>'+esc(u.nm)+'</td><td>'+esc(u.role)+'</td><td>'+esc(u.dept)+'</td><td><span class="access-pill">'+esc(u.acc)+'</span></td><td>'+(off?'<span class="badge b-done">выключен</span>':'<span class="badge b-paid">активен</span>')+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="user-toggle" data-i="'+i+'">'+(off?'Включить':'Выключить')+'</button></td></tr>';}).join('')+'</table>';
  return '<div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>'+ic('i-users')+' Сотрудники</b><span class="muted">'+DATA.users.length+' учётных записей</span><button class="btn btn-primary" style="margin-left:auto" data-act="user-add">+ Добавить сотрудника</button></div><div class="panel">'+users+'</div><div class="panel"><h3>'+ic('i-users')+'Матрица доступа (RBAC)</h3>'+rbac+'</div>';}
 function mReports(){return '<div class="panel"><h3>'+ic('i-report')+'Отчёты<span class="hint">CSV — реальная выгрузка демо-данных</span></h3><table class="tbl"><tr><th>Отчёт</th><th>Период</th><th></th></tr>'+
- [['Выручка по услугам','Июнь 2026','rev'],['Воронка продаж и конверсия','II квартал','funnel'],['Загрузка лабораторий','Июнь 2026','lab'],['Доходы для Счётной палаты (подстатья 131)','Июнь 2026','reg']].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="toast" data-msg="PDF будет сформирован в боевой версии">PDF</button><button class="btn btn-primary" data-act="csv-report" data-rep="'+r[2]+'">CSV</button></td></tr>';}).join('')+'</table></div>';}
+ [['Выручка по услугам','Июнь 2026','rev'],['Воронка продаж и конверсия','II квартал','funnel'],['Загрузка лабораторий','Июнь 2026','lab'],['Доходы для Счётной палаты (подстатья 131)','Июнь 2026','reg']].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td class="row-actions"><button class="btn btn-ghost" data-act="pdf-report" data-rep="'+r[2]+'">PDF</button><button class="btn btn-primary" data-act="csv-report" data-rep="'+r[2]+'">CSV</button></td></tr>';}).join('')+'</table></div>';}
 function csvReport(rep){
  if(rep==='reg'){csvRegistry();return;}
  var name,head,lines;
@@ -469,6 +474,25 @@ function csvReport(rep){
  else if(rep==='funnel'){name='voronka_prodazh.csv';head='Статус;Кол-во;Сумма';var cols=['new','work','bill','paid','done'];lines=cols.map(function(c){var it=DATA.leads.filter(function(l){return l.status===c;});return STATUS[c][1]+';'+it.length+';'+sum(it.map(function(l){return l.amount;}));});}
  else {name='zagruzka_laboratorij.csv';head='Исполнитель;Активных заданий';var mp={};DATA.lab.forEach(function(t){if(t.status!=='done')mp[t.who]=(mp[t.who]||0)+1;});lines=Object.keys(mp).map(function(k){return k+';'+mp[k];});}
  download(name,'﻿'+head+'\n'+lines.join('\n'));
+}
+function printDoc(title,sub,tableHtml){
+ var w=window.open('','_blank'); if(!w){toast('Разрешите всплывающие окна, чтобы сформировать PDF (в окне печати — «Сохранить как PDF»)');return;}
+ w.document.write('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>*{box-sizing:border-box}body{font-family:Georgia,\'Times New Roman\',serif;margin:34px;color:#1b2733}.hd{border-bottom:2px solid #c41019;padding-bottom:10px;margin-bottom:16px}.org{font-weight:700;font-size:15px}.muted{color:#586673;font-size:11.5px}h1{font-size:17px;margin:0 0 4px}.sub{color:#586673;font-size:12.5px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:left}th{background:#f1f5f9}td.r,th.r{text-align:right}.sign{margin-top:34px;display:flex;justify-content:space-between;font-size:12.5px}@media print{body{margin:0}}</style></head><body>'+
+  '<div class="hd"><div class="org">ВНИИ кондитерской промышленности</div><div class="muted">Филиал ФГБНУ «ФНЦ пищевых систем им. В.М. Горбатова» РАН · реквизиты (ИНН/ОГРН) подставляет институт</div></div>'+
+  '<h1>'+esc(title)+'</h1><div class="sub">'+esc(sub)+'</div>'+tableHtml+
+  '<div class="sign"><span>Исполнитель: __________________ /'+esc(state.role?ROLES[state.role].who:'')+'/</span><span>Сформировано: '+DEMO_DATE+'.2026</span></div>'+
+  '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);};</scr'+'ipt></body></html>');
+ w.document.close();
+}
+function pdfReport(rep){
+ var title,sub,headers,rows;
+ if(rep==='rev'){title='Выручка по услугам';sub='Июнь 2026 · тыс. ₽';headers=['Услуга','Сумма, тыс.₽'];rows=DATA.revServices.map(function(r){return [r[0],String(r[1])];});}
+ else if(rep==='funnel'){title='Воронка продаж и конверсия';sub='II квартал 2026';headers=['Статус','Кол-во','Сумма'];var cols=['new','work','bill','paid','done'];rows=cols.map(function(c){var it=DATA.leads.filter(function(l){return l.status===c;});return [STATUS[c][1],String(it.length),money(sum(it.map(function(l){return l.amount;})))];});}
+ else if(rep==='lab'){title='Загрузка лабораторий';sub='Июнь 2026 · активные задания';headers=['Исполнитель','Активных заданий'];var mp={};DATA.lab.forEach(function(t){if(t.status!=='done')mp[t.who]=(mp[t.who]||0)+1;});rows=Object.keys(mp).map(function(k){return [k,String(mp[k])];});}
+ else {title='Доходы от платных услуг (подстатья 131, КФО 2)';sub=periodLabel()+' · счёт 205.31';headers=['Договор','Заказчик','Услуга','Оплата','НДС','Сумма, ₽'];rows=paidLeads().filter(inFinPeriod).map(function(l){return ['Д-'+l.id.slice(2),l.client,l.service,l.paidDate||'—',vatShort(l),money(l.amount)];});}
+ var th='<tr>'+headers.map(function(h,i){return '<th'+(i===headers.length-1?' class="r"':'')+'>'+esc(h)+'</th>';}).join('')+'</tr>';
+ var body=rows.length?rows.map(function(r){return '<tr>'+r.map(function(cl,i){return '<td'+(i===r.length-1?' class="r"':'')+'>'+esc(String(cl))+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+headers.length+'">Нет данных за период.</td></tr>';
+ printDoc(title,sub,'<table>'+th+body+'</table>');
 }
 var HMONTHS=['','января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 var HICONS=[['ico-cake','Торт'],['ico-cookie','Печенье'],['ico-chocolate','Шоколад'],['ico-spark','Звёзды'],['ico-scan','КТ']];
@@ -528,6 +552,11 @@ function moveHoliday(fromKey,toKey,after){
  arr.splice(after?ti+1:ti,0,item);
 }
 function dlJSON(name,obj){var b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+function catalogChangeLog(){
+ var ev=LOG.filter(function(e){return /направлени|групп|позици|каталог/i.test(e.msg);}).slice(0,10);
+ if(!ev.length)return '<div class="panel"><h3>'+ic('i-report')+'История изменений каталога<span class="hint">кто и когда менял цены/методики</span></h3><div class="muted" style="padding:4px 2px">Изменений пока не было. Все правки направлений, групп и позиций фиксируются здесь с автором и временем.</div></div>';
+ return '<div class="panel"><h3>'+ic('i-report')+'История изменений каталога<span class="hint">кто и когда менял цены/методики</span></h3><table class="tbl"><tr><th>Время</th><th>Пользователь</th><th>Действие</th></tr>'+ev.map(function(e){return '<tr><td>'+e.t+'</td><td>'+esc(e.who)+'</td><td>'+esc(e.msg)+'</td></tr>';}).join('')+'</table></div>';
+}
 function mCatalog(){
  var C=DATA.catalog||[];
  if(state.catDir==null){
@@ -543,7 +572,8 @@ function mCatalog(){
   }).join('');
   return '<div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>'+ic('i-lab')+' Каталог услуг</b><span class="muted">'+C.length+' направлений · '+totG+' групп · '+totI+' позиций · uslugi.html</span><button class="btn btn-ghost" style="margin-left:auto" data-act="cat-export">Экспорт JSON</button><button class="btn btn-primary" data-act="cat-dadd">+ Направление</button></div>'
     +'<div class="panel">'+(C.length?'<table class="tbl"><tr><th>Направление</th><th>Групп</th><th>Позиций</th><th></th></tr>'+rows+'</table>':'<div class="empty">Каталог пуст. Добавьте направление.</div>')+'</div>'
-    +'<div class="norm-note">Структура: направление → группа → позиция (наименование + метод/ГОСТ). Изменения сразу видны на странице каталога (в прототипе — из этой админки в том же браузере). «Экспорт JSON» — файл <code>uslugi-catalog.json</code> для боевого сайта. Скрытые направления и группы на сайте не показываются.</div>';
+    +'<div class="norm-note">Структура: направление → группа → позиция (наименование + метод/ГОСТ). Изменения сразу видны на странице каталога (в прототипе — из этой админки в том же браузере). «Экспорт JSON» — файл <code>uslugi-catalog.json</code> для боевого сайта. Скрытые направления и группы на сайте не показываются.</div>'
+    +catalogChangeLog();
  }
  var d=C[state.catDir]; if(!d){state.catDir=null;state.catGroup=null;return mCatalog();}
  if(state.catGroup==null){
@@ -665,7 +695,7 @@ function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(
   '<div class="sod-r"><span>Оплату подтвердил</span><b>'+esc(l.paidBy||'—')+'</b></div>'+
   '<div class="sod-r"><span>Акт сформировал</span><b>'+esc(l.actBy||'—')+'</b></div></div>';
  var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#586673">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
- openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+orderFlow(l)+ctl+clientHistory(l)+leadTimeline(l)+notes+'<div class="btnrow">'+acts+'</div></div>');
+ openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+' <span class="muted" style="font-size:12px">('+(l.vat&&l.vat!=='auto'?'указано вручную':'авто по услуге')+')</span></span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+orderFlow(l)+ctl+clientHistory(l)+leadTimeline(l)+notes+'<div class="btnrow">'+acts+'</div></div>');
 }
 function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
  openDrawer('<div class="dh"><div><h3>Ответ клиенту</h3><div class="muted" style="font-size:13px">'+l.client+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Сообщение</label><textarea id="replyTxt" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit" placeholder="Здравствуйте! По вашей заявке…"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="lead-send" data-id="'+id+'">Отправить</button><button class="btn btn-ghost" data-act="lead-open" data-id="'+id+'">Назад</button></div></div>');}
@@ -698,8 +728,8 @@ document.addEventListener('click',function(e){
   case 'lead-paid': if(!can('paid')){toast('Недостаточно прав: оплату подтверждает '+whoDoes('paid'));break;} L.status='paid';L.paidDate='09.06';L.paidBy=who;logLeadEvent(L,who,'Поступила оплата');logAct(who,'принята оплата по '+id);closeDrawer();go();toast('Оплата зафиксирована по '+id); break;
   case 'lead-act': { if(!can('act')){toast('Недостаточно прав: акт формирует '+whoDoes('act'));break;} var snapA=JSON.parse(JSON.stringify(L)); L.status='done';L.act=true;L.actBy=who;logLeadEvent(L,who,'Сформирован акт, сделка закрыта');logAct(who,'сформирован акт по '+id);closeDrawer();go(); toast._undo=function(){var ix=DATA.leads.findIndex(function(x){return x.id===id;}); if(ix>-1)DATA.leads[ix]=snapA; logAct(who,'отменён акт по '+id); go(); toast('Действие отменено');}; toast('Акт сформирован, сделка закрыта','Отменить'); break; }
   case 'lead-tolab': { if(!can('tolab')){toast('Недостаточно прав: передаёт в лабораторию '+whoDoes('tolab'));break;} DATA.lab.unshift({id:'И-'+(513+DATA.lab.length),sample:'Образец по '+id,method:L.service,due:'12.06',who:'Кузнецова',status:'new'}); L.toLab=true; var sid=pushToKabinet(L); if(sid)L.kabinetSampleId=sid; logLeadEvent(L,who,'Передана в лабораторию'+(sid?' (образец '+sid+')':'')); logAct(who,'заявка '+id+' передана в лабораторию'+(sid?', создан образец '+sid:'')); closeDrawer();go(); toast(sid?('Передано — образец '+sid+' создан в кабинете лаборатории'):'Передано в лабораторию (создано задание)'); break; }
-  case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Телефон</label><input id="nlp" placeholder="+7 (___) ___-__-__"></div><div class="fld"><label>E-mail</label><input id="nle" type="email" placeholder="client@example.ru"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
-  case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0,ph=(document.getElementById('nlp')||{}).value,em=(document.getElementById('nle')||{}).value; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,phone:ph,email:em,service:s||'—',amount:am,status:'new',mgr:who,date:'09.06',notes:[],events:[],seen:true});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
+  case 'new-lead': openDrawer('<div class="dh"><h3>Новая заявка</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Клиент</label><input id="nlc" placeholder="ООО «…»"></div><div class="fld"><label>Телефон</label><input id="nlp" placeholder="+7 (___) ___-__-__"></div><div class="fld"><label>E-mail</label><input id="nle" type="email" placeholder="client@example.ru"></div><div class="fld"><label>Услуга</label><input id="nls" placeholder="Срок годности…"></div><div class="fld"><label>Сумма, ₽</label><input id="nla" type="number" placeholder="50000"></div><div class="fld"><label>НДС</label><select id="nlv" style="width:100%;padding:10px;border:1px solid #e6eaef;border-radius:9px;font-family:inherit"><option value="auto">Авто (по типу услуги)</option><option value="none">Без НДС</option><option value="lgota">Льгота п.149 НК</option><option value="20">НДС 20%</option></select></div><div class="btnrow"><button class="btn btn-primary" data-act="new-lead-save">Создать</button></div></div>'); break;
+  case 'new-lead-save': var c=(document.getElementById('nlc')||{}).value,s=(document.getElementById('nls')||{}).value,am=+((document.getElementById('nla')||{}).value)||0,ph=(document.getElementById('nlp')||{}).value,em=(document.getElementById('nle')||{}).value,vt=(document.getElementById('nlv')||{}).value||'auto'; if(c){var nid='З-'+(239+DATA.leads.length);DATA.leads.unshift({id:nid,client:c,phone:ph,email:em,service:s||'—',amount:am,vat:vt,status:'new',mgr:who,date:DEMO_DATE,notes:[],events:[],seen:true});logAct(who,'создана заявка '+nid);} closeDrawer();go();toast('Заявка создана'); break;
   case 'lab-done': var t=DATA.lab.find(function(x){return x.id===id;}); if(t){t.status='done';logAct(who,'загружен протокол '+id);} go();toast('Протокол загружен, задание выполнено'); break;
   case 'sim-lead': { var pool=[['ООО «Бисквит-Мастер»','Срок годности (бисквит)','+7 (931) 200-55-10','order@biskvit.ru',54000],['ИП Громова','Идентификация мёда в прянике','+7 (902) 717-30-44','gromova@mail.ru',39000],['АО «КондитерУрал»','КТ-морфометрия зефира','+7 (343) 901-22-87','lab@konditerural.ru',88000]]; var p=pool[DATA.leads.length%pool.length], nid='З-'+(239+DATA.leads.length); DATA.leads.unshift({id:nid,client:p[0],service:p[1],phone:p[2],email:p[3],amount:p[4],status:'new',mgr:'Орлова',date:'09.06',notes:[],events:[],seen:false}); logAct('Система','новая заявка '+nid+' с сайта'); go(); toast('Новая заявка '+nid+' поступила с сайта'); break; }
   case 'task-new': var uopts=DATA.users.filter(function(u){return u.nm!=='Белецкий С. Л.';}).map(function(u){return '<option>'+esc(u.nm)+'</option>';}).join(''); openDrawer('<div class="dh"><h3>Новое поручение</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Исполнитель</label><select id="tas">'+uopts+'</select></div><div class="fld"><label>Поручение</label><input id="tti" placeholder="Что нужно сделать"></div><div class="fld"><label>Срок (дд.мм)</label><input id="tdu" placeholder="15.06"></div><div class="btnrow"><button class="btn btn-primary" data-act="task-create">Создать поручение</button></div></div>'); break;
@@ -710,6 +740,7 @@ document.addEventListener('click',function(e){
   case 'task-accept': var ta2=DATA.tasks.find(function(x){return x.id===id;}); if(ta2){ta2.status='done';logAct(who,'принят отчёт по поручению '+id);} closeDrawer();go();toast('Отчёт принят, поручение закрыто'); break;
   case 'task-return': var ta3=DATA.tasks.find(function(x){return x.id===id;}); if(ta3){ta3.status='progress';logAct(who,'поручение '+id+' возвращено на доработку');} closeDrawer();go();toast('Возвращено на доработку'); break;
   case 'csv-report': csvReport(a.getAttribute('data-rep')); logAct(who,'выгрузка отчёта (CSV)'); toast('Отчёт выгружен в CSV'); break;
+  case 'pdf-report': pdfReport(a.getAttribute('data-rep')); logAct(who,'сформирован PDF-отчёт'); toast('Отчёт открыт для печати/сохранения в PDF'); break;
   case 'user-toggle': var ui=+a.getAttribute('data-i'),uu=DATA.users[ui]; if(uu){if(uu.active!==false&&!confirm('Выключить учётку «'+uu.nm+'»? Пользователь потеряет доступ к системе.'))break; uu.active=(uu.active===false); logAct(who,(uu.active?'включена':'выключена')+' учётка «'+uu.nm+'»');} go(); toast(uu&&uu.active?'Учётка включена':'Учётка выключена'); break;
   case 'user-add': var ro=['Директор','Менеджер','Бухгалтерия','Рук. лаборатории','Научный сотрудник','Техподдержка','Администратор'].map(function(r){return '<option>'+r+'</option>';}).join(''); openDrawer('<div class="dh"><h3>Новый сотрудник</h3><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>ФИО</label><input id="unm" placeholder="Фамилия И. О."></div><div class="fld"><label>Роль</label><select id="uro">'+ro+'</select></div><div class="fld"><label>Отдел</label><input id="ude" placeholder="Научный отдел"></div><div class="btnrow"><button class="btn btn-primary" data-act="user-create">Создать учётку</button></div></div>'); break;
   case 'user-create': var unm=val('unm').trim(),uro=val('uro'),ude=val('ude').trim(); if(unm){DATA.users.push({nm:unm,role:uro,dept:ude||'—',acc:'—',active:true});logAct(who,'создана учётка «'+unm+'» ('+uro+')');} closeDrawer();go();toast('Учётка создана'); break;
@@ -789,6 +820,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('change',function(e){
  if(e.target.id==='roleSel'){state.role=e.target.value;state.mod=ROLES[state.role].menu[0];state.finView='list';logAct(ROLES[state.role].who,'переключение роли: «'+ROLES[state.role].label+'»');go();}
  if(e.target.id==='uTypeSel'){state.uType=e.target.value;go();}
+ if(e.target.id==='finPeriodSel'){state.finPeriod=e.target.value;go();}
  if(e.target.id==='hType'){var r=document.getElementById('hDateRow'); if(r)r.style.display=(e.target.value==='oct3sun')?'none':'';}
  if(e.target.id==='hIcon'){holIconData=null;}
  if(e.target.id==='hIconFile'){var f=e.target.files&&e.target.files[0]; if(f){if(f.size>400000)toast('Иконку лучше до ~300 КБ'); var rd=new FileReader(); rd.onload=function(){holIconData=rd.result; renderHolPreview();}; rd.readAsDataURL(f);}}
