@@ -45,6 +45,24 @@
     for (var i = 0; i < METHODS.length; i++) if (s.indexOf(METHODS[i].k) > -1) return METHODS[i];
     return null;
   }
+  // показатели из каталога услуг управленческой системы (тот же origin) — для подсказок при приёме образца
+  function catalogPositions() {
+    try {
+      var d = JSON.parse(localStorage.getItem("wniikp_admin_v1") || "null");
+      if (d && Array.isArray(d.catalog)) {
+        var out = [];
+        d.catalog.forEach(function (dir) {
+          if (dir.hidden) return;
+          (dir.groups || []).forEach(function (g) {
+            if (g.hidden) return;
+            (g.items || []).forEach(function (it) { out.push({ n: it.n, m: it.m || "", group: g.group }); });
+          });
+        });
+        if (out.length) return out;
+      }
+    } catch (e) {}
+    return null;
+  }
   /* Разбор строки "Показатель (ГОСТ …)" → {ind, nd} */
   function parseTest(str) {
     if (str && typeof str === "object") return str;
@@ -129,6 +147,8 @@
   if (!state.instruments) state.instruments = JSON.parse(JSON.stringify(DEFAULT_INSTR));
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} // персист при загрузке — нужно для сквозной связи с управленческой
   var undo = null; // последнее обратимое действие
+  var jfilter = "all"; // фильтр журнала по статусу (не персистится)
+  var TODAY_DM = "10.06"; // демо-«сегодня» в формате дд.мм (для даты приёма образца)
 
   /* доступность прибора для планирования: ремонт / просроченная поверка / готов */
   function instrAvail(i) {
@@ -193,6 +213,7 @@
     var work = s.filter(function (x) { return x.status === "work"; }).length;
     var done = s.filter(function (x) { return x.status === "done"; }).length;
     var nw = s.filter(function (x) { return x.status === "new"; }).length;
+    var review = s.filter(function (x) { return x.status === "review"; }).length;
     var over = s.filter(function (x) { var d = dueState(x); return d && d.cls === "over"; }).length;
     var avail = state.instruments.filter(function (i) { return instrAvail(i).ok; });
     var slots = avail.length * DAYS.length;
@@ -211,7 +232,7 @@
     var recent = total ? '<table class="kb-table"><tbody>' + recentRows + "</tbody></table>" : empty("По выбранной лаборатории образцов пока нет.");
     $("kb-dash").innerHTML =
       '<h2>Дашборд</h2>' + labInfo() +
-      '<div class="kb-kpis">' + card(total, "Образцов всего") + card(nw, "Новые", "amber") + card(work, "В работе", "blue") + card(done, "Готово", "green") + card(over, "Просрочено", "red") + card(load + "%", "Загрузка приборов") + "</div>" +
+      '<div class="kb-kpis">' + card(total, "Образцов всего") + card(nw, "Новые", "amber") + card(work, "В работе", "blue") + card(review, "На утверждении", "review") + card(done, "Готово", "green") + card(over, "Просрочено", "red") + card(load + "%", "Загрузка приборов") + "</div>" +
       planBanner +
       '<div class="kb-grid2">' +
       '<div class="kb-box"><h3>Загрузка приборов (неделя)</h3>' + instrBars() + "</div>" +
@@ -245,7 +266,8 @@
     return v ? '<span class="kb-vres ' + v.cls + '">' + vico(v.cls) + v.txt + "</span>" : "";
   }
   function renderJournal() {
-    var visible = state.samples.filter(function (x) { return curLab() === "all" || x.lab === curLab(); });
+    var labSamples = state.samples.filter(function (x) { return curLab() === "all" || x.lab === curLab(); });
+    var visible = labSamples.filter(function (x) { return jfilter === "all" || x.status === jfilter; });
     var rows = visible.map(function (x) {
       var idx = state.samples.indexOf(x);
       var acts = "";
@@ -263,26 +285,58 @@
         '<td><ul class="kb-tests">' + tests + "</ul></td>" +
         "<td>" + badge(x.status) + resultPill(x) + duePill(x) + "</td><td>" + acts + "</td></tr>";
     }).join("");
+    var STF = [["all", "Все"], ["new", "Принят"], ["work", "В работе"], ["review", "На утверждении"], ["done", "Готов"]];
+    var chips = labSamples.length ? '<div class="kb-chips">' + STF.map(function (f) {
+      var c = f[0] === "all" ? labSamples.length : labSamples.filter(function (x) { return x.status === f[0]; }).length;
+      return '<button class="kb-chip' + (jfilter === f[0] ? " active" : "") + '" data-jf="' + f[0] + '">' + f[1] + ' <span class="kb-chip-n">' + c + "</span></button>";
+    }).join("") + "</div>" : "";
+    var curF = (STF.filter(function (f) { return f[0] === jfilter; })[0] || ["", "—"])[1];
     var table = visible.length
       ? '<table class="kb-table"><thead><tr><th>Образец</th><th>Продукт / заказчик</th><th>Испытания</th><th>Статус</th><th></th></tr></thead><tbody>' + rows + "</tbody></table>"
-      : empty("По выбранной лаборатории образцов пока нет. Выберите «Все лаборатории» или примите первый образец.", '<button class="kb-mini primary" id="js-empty-add">Принять первый образец</button>');
+      : (labSamples.length
+        ? empty("Нет образцов со статусом «" + curF + "».", '<button class="kb-mini" id="js-filter-reset">Показать все</button>')
+        : empty("По выбранной лаборатории образцов пока нет. Выберите «Все лаборатории» или примите первый образец.", '<button class="kb-mini primary" id="js-empty-add">Принять первый образец</button>'));
+    var labOpts = LABS.filter(function (o) { return o.id !== "all"; }).map(function (o) { return '<option value="' + o.id + '"' + (o.id === curLab() ? " selected" : "") + ">" + esc(o.name) + "</option>"; }).join("");
+    var cpos = catalogPositions();
+    var pickerHtml = "";
+    if (cpos) {
+      var byG = {}, order = [];
+      cpos.forEach(function (p) { if (!byG[p.group]) { byG[p.group] = []; order.push(p.group); } byG[p.group].push(p); });
+      pickerHtml = '<div class="kb-fld"><select id="js-test-add" title="Добавить показатель из каталога услуг"><option value="">+ показатель из каталога…</option>' +
+        order.map(function (gn) {
+          return '<optgroup label="' + esc(gn) + '">' + byG[gn].map(function (p) {
+            return '<option value="' + esc(p.n + (p.m ? " (" + p.m + ")" : "")) + '">' + esc(p.n.length > 64 ? p.n.slice(0, 62) + "…" : p.n) + "</option>";
+          }).join("") + "</optgroup>";
+        }).join("") + "</select></div>";
+    }
     $("kb-journal").innerHTML =
       '<h2>Журнал образцов <span class="kb-sub">(LIMS-lite)</span></h2>' + labInfo() +
       '<div class="kb-box" style="margin-bottom:16px"><h3>Принять образец</h3>' +
       '<div class="kb-form">' +
       '<input id="js-prod" placeholder="Продукт (напр. Печенье сахарное)">' +
       '<input id="js-cli" placeholder="Заказчик">' +
-      '<input id="js-tests" placeholder="Испытания через запятую">' +
-      '<input id="js-due" type="date" title="Срок выполнения" style="flex:0 0 160px">' +
+      '<div class="kb-fld"><select id="js-lab" title="Лаборатория">' + labOpts + "</select></div>" +
+      '<input id="js-tests" placeholder="Испытания (через запятую или из справочника →)">' +
+      pickerHtml +
+      '<input id="js-due" type="date" title="Срок выполнения" style="flex:0 0 150px">' +
       '<button class="kb-mini primary" id="js-add">Принять</button></div></div>' +
-      (visible.length ? '<div class="kb-jtools"><input id="js-search" placeholder="Поиск: образец / продукт / заказчик…"><button class="kb-mini" id="js-csv">Экспорт CSV</button></div>' : "") + table;
+      chips +
+      (labSamples.length ? '<div class="kb-jtools"><input id="js-search" placeholder="Поиск: образец / продукт / заказчик…"><button class="kb-mini" id="js-csv">Экспорт CSV</button></div>' : "") + table;
     $("js-add").addEventListener("click", function () {
       var prod = $("js-prod").value.trim(); if (!prod) { toast("Укажите продукт"); return; }
       var n = state.samples.length + 101;
-      state.samples.push({ id: "К-" + n, lab: (curLab() === "all" ? "physchem" : curLab()), date: "—", due: dueFromIso($("js-due").value), product: prod, client: $("js-cli").value.trim() || "—", tests: ($("js-tests").value.trim() ? $("js-tests").value.split(",").map(function (t) { return t.trim(); }) : ["—"]), status: "new" });
+      var lb = ($("js-lab") && $("js-lab").value) || (curLab() === "all" ? "physchem" : curLab());
+      state.samples.push({ id: "К-" + n, lab: lb, date: TODAY_DM, due: dueFromIso($("js-due").value), product: prod, client: $("js-cli").value.trim() || "—", tests: ($("js-tests").value.trim() ? $("js-tests").value.split(",").map(function (t) { return t.trim(); }).filter(Boolean) : ["—"]), status: "new" });
       save(); renderJournal();
-      toast("Образец К-" + n + " принят");
+      toast("Образец К-" + n + " принят (" + (LABS.filter(function (o) { return o.id === lb; })[0] || { name: lb }).name + ")");
     });
+    var ta = $("js-test-add"); if (ta) ta.addEventListener("change", function () {
+      if (!ta.value) return;
+      var f = $("js-tests"); f.value = (f.value.trim() ? f.value.trim().replace(/,\s*$/, "") + ", " : "") + ta.value;
+      ta.value = ""; f.focus();
+    });
+    $("kb-journal").querySelectorAll(".kb-chip[data-jf]").forEach(function (c) { c.addEventListener("click", function () { jfilter = c.dataset.jf; renderJournal(); }); });
+    var fr = $("js-filter-reset"); if (fr) fr.addEventListener("click", function () { jfilter = "all"; renderJournal(); });
     var ea = $("js-empty-add"); if (ea) ea.addEventListener("click", function () { var p = $("js-prod"); if (p) { p.scrollIntoView({ block: "center" }); p.focus(); } });
     $("kb-journal").querySelectorAll(".kb-mini[data-act]").forEach(function (b) {
       b.addEventListener("click", function () {

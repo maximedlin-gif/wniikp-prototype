@@ -34,6 +34,8 @@ var DATA={
  revMonths:[['Янв',1180],['Фев',1320],['Мар',1410],['Апр',1270],['Май',1560],['Июн',1840]],
  revServices:[['Сроки годности',640],['Шоколад/какао',420],['КТ-морфометрия',360],['Обучение',280],['Микробиология',140]],
  leads:[
+  {id:'З-240',client:'ООО «ВкусПром»',phone:'+7 (846) 339-21-04',email:'quality@vkusprom.ru',service:'Контроль порчи жиров (новая партия)',amount:40000,status:'work',mgr:'Орлова',date:'08.06',notes:[],events:[]},
+  {id:'З-239',client:'АО «Сластёна»',phone:'+7 (495) 770-33-18',email:'lab@slastena.ru',service:'Идентификация шоколада (прошлая партия)',amount:38000,status:'done',mgr:'Орлова',date:'12.05',billDate:'12.05',dueDate:'18.05',notes:[],events:[],paidDate:'15.05',act:true},
   {id:'З-238',client:'ООО «Пряничный двор»',phone:'+7 (920) 555-12-30',email:'zakaz@pryanik-dvor.ru',service:'Срок годности (пряники)',amount:48000,status:'new',mgr:'Орлова',date:'07.06',notes:[],events:[]},
   {id:'З-237',client:'ИП Сидорова (глазурь)',phone:'+7 (905) 441-88-02',email:'sidorova.glaze@mail.ru',service:'Подбор аналога жира',amount:62000,status:'new',mgr:'Орлова',date:'06.06',notes:[],events:[]},
   {id:'З-235',client:'АО «Сластёна»',phone:'+7 (495) 770-33-18',email:'lab@slastena.ru',service:'КТ-морфометрия бисквита',amount:90000,status:'work',mgr:'Орлова',date:'05.06',notes:[],events:[]},
@@ -226,6 +228,31 @@ function notifList(role){var R=ROLES[role],who=R.who,n=[];
 function kpi(lab,val,chg,icon){var c=chg===undefined?'':'<div class="chg '+(chg>=0?'up':'down')+'">'+(chg>=0?'▲ +':'▼ ')+chg+'% к прошлому мес.</div>';
  return '<div class="kpi"><div class="lab">'+ic(icon)+lab+'</div><div class="val">'+val+'</div>'+c+'</div>';}
 
+// ---------- сквозной экран «Требует внимания» (читает и управленческую, и кабинет лаборатории) ----------
+function kabStore(){try{return JSON.parse(localStorage.getItem('wniikp_kabinet_v8')||'null');}catch(e){return null;}}
+function attentionItems(){
+ var items=[];
+ var newl=DATA.leads.filter(function(l){return l.status==='new'&&!l.seen;}); if(newl.length)items.push({icon:'i-leads',mod:'leads',hot:true,txt:newl.length+' '+plural(newl.length,'новая заявка','новые заявки','новых заявок')+' с сайта'});
+ var hot=DATA.leads.filter(leadHot); if(hot.length)items.push({icon:'i-leads',mod:'leads',hot:true,txt:hot.length+' '+plural(hot.length,'заявка горит','заявки горят','заявок горят')+' — нет ответа >2 дн.'});
+ var rep=DATA.tasks.filter(function(t){return t.status==='report';}); if(rep.length)items.push({icon:'i-report',mod:'tasks',txt:rep.length+' '+plural(rep.length,'отчёт по поручению ждёт','отчёта ждут','отчётов ждут')+' приёмки'});
+ var ov=DATA.lab.filter(labOverdue); if(ov.length)items.push({icon:'i-lab',mod:'lab',hot:true,txt:ov.length+' лаб. '+plural(ov.length,'задание просрочено','задания просрочены','заданий просрочено')});
+ var debt=DATA.leads.filter(function(l){return l.status==='bill';}); if(debt.length)items.push({icon:'i-fin',mod:'finance',txt:debt.length+' '+plural(debt.length,'счёт ждёт','счёта ждут','счетов ждут')+' оплаты'});
+ var ot=DATA.tickets.filter(function(t){return t.status!=='done';}); if(ot.length)items.push({icon:'i-help',mod:'tickets',txt:ot.length+' '+plural(ot.length,'открытый тикет','открытых тикета','открытых тикетов')});
+ var kb=kabStore();
+ if(kb){
+  var rev=(kb.samples||[]).filter(function(x){return x.status==='review';}); if(rev.length)items.push({icon:'i-lab',ext:true,txt:rev.length+' '+plural(rev.length,'протокол на утверждении','протокола на утверждении','протоколов на утверждении')+' в лаборатории'});
+  var rpr=(kb.instruments||[]).filter(function(i){return i.status==='repair';}); if(rpr.length)items.push({icon:'i-lab',ext:true,hot:true,txt:rpr.length+' '+plural(rpr.length,'прибор в ремонте','прибора в ремонте','приборов в ремонте')});
+ }
+ return items;
+}
+function attentionPanel(){
+ var items=attentionItems();
+ if(!items.length)return '<div class="panel"><h3>'+ic('i-check')+'Требует внимания</h3><div class="att-empty">'+ic('i-check')+' Срочных задач нет — всё под контролем.</div></div>';
+ return '<div class="panel"><h3>'+ic('i-bell')+'Требует внимания<span class="hint">'+items.length+'</span></h3>'+items.map(function(it){
+   var inner='<span class="att-ic">'+ic(it.icon)+'</span><span class="att-txt">'+esc(it.txt)+'</span>'+(it.ext?'<span class="att-go ext">кабинет лаборатории ↗</span>':'<span class="att-go">Открыть →</span>');
+   return it.ext?'<a class="att-r'+(it.hot?' hot':'')+'" href="../kabinet.html" target="_blank" rel="noopener">'+inner+'</a>':'<a class="att-r'+(it.hot?' hot':'')+'" data-mod="'+it.mod+'" tabindex="0" role="button">'+inner+'</a>';
+ }).join('')+'</div>';
+}
 // ---------- modules ----------
 function mDash(role){
  if(role==='accountant') return mFinance(role);
@@ -236,7 +263,7 @@ function mDash(role){
   var hot=DATA.leads.filter(leadHot).length;
   return '<div class="kpis">'+kpi('Мои заявки',mine.length,undefined,'i-leads')+kpi('В работе',mine.filter(function(l){return l.status==='work';}).length,undefined,'i-leads')+kpi('Ждут счёта',DATA.leads.filter(function(l){return l.status==='bill';}).length,undefined,'i-fin')+'<div class="kpi'+(hot?' kpi-hot':'')+'"><div class="lab">'+ic('i-leads')+'Горящие (нет ответа >2 дн.)</div><div class="val">'+hot+'</div></div>'+'</div>'+leadsKanban(true);
  }
- return '<div class="kpis">'+kpi('Выручка за месяц',money(1840000),12,'i-fin')+kpi('Заявок за месяц',DATA.leads.length,8,'i-leads')+kpi('Конверсия в оплату','31%',4,'i-report')+kpi('Загрузка лабораторий','78%',undefined,'i-lab')+'</div>'+
+ return '<div class="kpis">'+kpi('Выручка за месяц',money(1840000),12,'i-fin')+kpi('Заявок за месяц',DATA.leads.length,8,'i-leads')+kpi('Конверсия в оплату','31%',4,'i-report')+kpi('Загрузка лабораторий','78%',undefined,'i-lab')+'</div>'+attentionPanel()+
   '<div class="grid2"><div class="panel"><h3>'+ic('i-fin')+'Выручка по месяцам, тыс. ₽</h3>'+lineChart(DATA.revMonths)+'</div><div class="panel"><h3>'+ic('i-report')+'Выручка по услугам, тыс. ₽</h3>'+barList(DATA.revServices)+'</div></div>'+
   '<div class="panel"><h3>'+ic('i-leads')+'Последние заявки<span class="hint">режим просмотра</span></h3>'+leadsTable(DATA.leads.slice(0,6))+'</div>';
 }
@@ -608,6 +635,13 @@ function orderFlow(l){
  if(l.protocolReady)link='<div class="of-ready">'+ic('i-check')+' Протокол '+esc(l.protocolNo||'')+' готов в лаборатории</div>'+link;
  return '<div class="of-wrap"><div class="of-t">Сквозной поток заказа</div><div class="order-flow">'+stages.map(function(s,i){return (i?'<span class="of-arrow">→</span>':'')+'<span class="of-step'+(s[1]?' done':'')+'">'+esc(s[0])+'</span>';}).join('')+'</div>'+link+'</div>';
 }
+function clientHistory(l){
+ var same=DATA.leads.filter(function(x){return x.client===l.client;});
+ if(same.length<=1)return '';
+ var paidSum=same.filter(function(x){return ['paid','done'].indexOf(x.status)>-1;}).reduce(function(a,x){return a+(x.amount||0);},0);
+ var rows=same.map(function(x){var cur=x.id===l.id; return '<div class="ch-r'+(cur?' cur':'')+'"'+(cur?'':' data-lead="'+x.id+'" role="button" tabindex="0"')+'><span class="ch-id">'+esc(x.id)+'</span><span class="ch-sv">'+esc(x.service)+'</span><span class="ch-am">'+money(x.amount)+'</span>'+sb(x.status)+'</div>';}).join('');
+ return '<div class="ch"><div class="ch-h">'+ic('i-leads')+' История клиента <span class="muted">· '+same.length+' '+plural(same.length,'заявка','заявки','заявок')+', оплачено '+money(paidSum)+'</span></div>'+rows+'</div>';
+}
 function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(!l)return;
  if(!l.seen){l.seen=true;saveData();updateLeadBadge();}
  var acts='';
@@ -631,7 +665,7 @@ function openLead(id){var l=DATA.leads.find(function(x){return x.id===id;}); if(
   '<div class="sod-r"><span>Оплату подтвердил</span><b>'+esc(l.paidBy||'—')+'</b></div>'+
   '<div class="sod-r"><span>Акт сформировал</span><b>'+esc(l.actBy||'—')+'</b></div></div>';
  var notes=l.notes.length?('<h4 style="margin:16px 0 6px;font-size:13px;color:#586673">Переписка</h4>'+l.notes.map(function(n){return '<div class="note">'+esc(n)+'</div>';}).join('')):'';
- openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+orderFlow(l)+ctl+leadTimeline(l)+notes+'<div class="btnrow">'+acts+'</div></div>');
+ openDrawer('<div class="dh"><div><h3>Заявка '+l.id+'</h3><div class="muted" style="font-size:13px">от '+l.date+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="kv"><b>Клиент</b><span>'+esc(l.client)+'</span></div><div class="kv"><b>Контакты</b><span class="kv-contacts">'+contactLinks(l)+'</span></div><div class="kv"><b>Услуга</b><span>'+esc(l.service)+'</span></div><div class="kv"><b>Сумма</b><span>'+money(l.amount)+'</span></div><div class="kv"><b>НДС</b><span>'+vatLabel(l)+'</span></div><div class="kv"><b>Менеджер</b><span>'+esc(l.mgr)+'</span></div><div class="kv"><b>Статус</b><span>'+sb(l.status)+'</span></div>'+orderFlow(l)+ctl+clientHistory(l)+leadTimeline(l)+notes+'<div class="btnrow">'+acts+'</div></div>');
 }
 function replyForm(id){var l=DATA.leads.find(function(x){return x.id===id;});
  openDrawer('<div class="dh"><div><h3>Ответ клиенту</h3><div class="muted" style="font-size:13px">'+l.client+'</div></div><button class="x" data-act="close">×</button></div><div class="db"><div class="fld"><label>Сообщение</label><textarea id="replyTxt" rows="5" style="width:100%;padding:11px;border:1px solid #e6eaef;border-radius:10px;font-family:inherit" placeholder="Здравствуйте! По вашей заявке…"></textarea></div><div class="btnrow"><button class="btn btn-primary" data-act="lead-send" data-id="'+id+'">Отправить</button><button class="btn btn-ghost" data-act="lead-open" data-id="'+id+'">Назад</button></div></div>');}

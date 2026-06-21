@@ -26,11 +26,11 @@ body.kb{background:#f4f5f7;color:var(--ink);margin:0}
 .kb-sub{color:var(--muted);font-size:12.5px;font-weight:500}
 
 /* KPI */
-.kb-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+.kb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px;margin-bottom:18px}
 .kb-kpi{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px}
 .kb-kpi .n{font-size:30px;font-weight:800;line-height:1;color:var(--ink)}
 .kb-kpi .l{font-size:13px;color:var(--muted);margin-top:6px}
-.kb-kpi.amber .n{color:#b87400}.kb-kpi.blue .n{color:var(--blue)}.kb-kpi.green .n{color:#1d7a3a}
+.kb-kpi.amber .n{color:#b87400}.kb-kpi.blue .n{color:var(--blue)}.kb-kpi.green .n{color:#1d7a3a}.kb-kpi.review .n{color:#5b21b6}
 
 .kb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .kb-box{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px}
@@ -101,6 +101,12 @@ body.kb{background:#f4f5f7;color:var(--ink);margin:0}
 /* тулбар журнала: поиск + CSV */
 .kb-jtools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .kb-jtools input{flex:1 1 280px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit}
+.kb-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.kb-chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 13px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit}
+.kb-chip:hover{border-color:var(--blue)}
+.kb-chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.kb-chip-n{opacity:.65;font-size:12px;margin-left:3px}
+.kb-chip.active .kb-chip-n{opacity:.9}
 
 /* кнопки-«призраки» и вторичные действия в журнале */
 .kb-mini.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:7px 8px}
